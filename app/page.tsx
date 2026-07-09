@@ -151,7 +151,7 @@ export default function Home() {
                 </span>
               </p>
 
-              <a className="getStarted" href="#services" aria-label="Get started">
+              <a className="getStarted" href="/studio" aria-label="Get started">
                 <span className="langEnglish">GET STARTED</span>
                 <span className="langHindi">शुरू करें</span>
               </a>

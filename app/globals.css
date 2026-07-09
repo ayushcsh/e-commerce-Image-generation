@@ -8,6 +8,1216 @@
   --yellow: #ffc900;
 }
 
+/* Two-column Studio workspace. */
+.studioPage {
+  --studio-canvas: #f5f5f4;
+  --studio-ink: var(--ink);
+  --studio-line: #e2e0dc;
+  --studio-muted: #6c6760;
+  --studio-paper: #ffffff;
+  --studio-yellow: var(--yellow);
+  min-height: 100vh;
+  background: #ffffff;
+  color: var(--studio-ink);
+  padding: 0 18px 24px;
+  font-family:
+    Arial,
+    Helvetica,
+    sans-serif;
+}
+
+.studioPage input,
+.studioPage textarea,
+.studioPage button {
+  font: inherit;
+}
+
+.studioPage button {
+  color: inherit;
+}
+
+.studioPage .studioTopBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  width: min(1440px, 100%);
+  min-height: 64px;
+  margin: 0 auto;
+  padding: 0;
+}
+
+.studioPage .studioBreadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+  color: #4f4a43;
+  font-size: 0.9rem;
+  font-weight: 850;
+}
+
+.studioPage .backLink {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: inherit;
+}
+
+.studioPage .backLink:hover,
+.studioPage .backLink:focus-visible {
+  color: var(--studio-ink);
+  outline: 0;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.studioPage .studioTitleBlock {
+  display: grid;
+  gap: 0.12rem;
+  min-width: 0;
+  text-align: right;
+}
+
+.studioPage .studioTitleBlock strong {
+  color: var(--studio-ink);
+  font-size: 0.92rem;
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+.studioPage .studioTitleBlock span {
+  color: var(--studio-muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.studioPage .studioWorkspace {
+  display: grid;
+  grid-template-columns: minmax(320px, 0.85fr) minmax(560px, 1.15fr);
+  gap: 1rem;
+  width: min(1440px, 100%);
+  min-height: calc(100vh - 88px);
+  margin: 0 auto;
+  border-radius: 18px;
+  background: var(--studio-canvas);
+  padding: 1rem;
+}
+
+.studioPage .uploadColumn,
+.studioPage .formColumn {
+  min-width: 0;
+  border: 1px solid var(--studio-line);
+  border-radius: 14px;
+  background: var(--studio-paper);
+  box-shadow: 0 16px 38px rgba(3, 3, 3, 0.055);
+}
+
+.studioPage .uploadColumn {
+  display: grid;
+  align-content: start;
+  gap: 0.9rem;
+  padding: 1rem;
+}
+
+.studioPage .formColumn {
+  display: grid;
+  align-content: start;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.studioPage .workspaceHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.studioPage .workspaceHeader > div {
+  display: grid;
+  gap: 0.22rem;
+  min-width: 0;
+}
+
+.studioPage .eyebrow {
+  margin: 0;
+  color: #877100;
+  font-size: 0.72rem;
+  font-weight: 950;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.studioPage .workspaceHeader h1,
+.studioPage .workspaceHeader h2 {
+  margin: 0;
+  color: var(--studio-ink);
+  font-size: clamp(1.45rem, 2.4vw, 2rem);
+  font-weight: 950;
+  letter-spacing: 0;
+  line-height: 1.02;
+}
+
+.studioPage .workspaceHeader p {
+  max-width: 54ch;
+  margin: 0;
+  color: var(--studio-muted);
+  font-size: 0.86rem;
+  font-weight: 650;
+  line-height: 1.45;
+}
+
+.studioPage .photoCounter {
+  display: grid;
+  min-width: 54px;
+  height: 38px;
+  place-items: center;
+  border: 1px solid var(--studio-ink);
+  border-radius: 999px;
+  background: var(--studio-yellow);
+  color: var(--studio-ink);
+  font-size: 0.86rem;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.studioPage .dropZone {
+  position: relative;
+  display: grid;
+  min-height: 280px;
+  place-items: center;
+  gap: 0.55rem;
+  border: 1.5px dashed #c9c4ba;
+  border-radius: 12px;
+  background:
+    linear-gradient(90deg, rgba(3, 3, 3, 0.035) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(3, 3, 3, 0.035) 1px, transparent 1px),
+    #fbfaf7;
+  background-size: 26px 26px;
+  padding: 1rem;
+  text-align: center;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    background-color 160ms ease;
+}
+
+.studioPage .dropZone.isDragging {
+  border-color: var(--studio-yellow);
+  background-color: rgba(255, 201, 0, 0.08);
+  box-shadow: inset 0 0 0 3px rgba(255, 201, 0, 0.22);
+}
+
+.studioPage .fileInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.studioPage .uploadIcon {
+  display: grid;
+  width: 46px;
+  height: 46px;
+  place-items: center;
+  border: 1px solid var(--studio-ink);
+  border-radius: 12px;
+  background: var(--studio-yellow);
+  color: var(--studio-ink);
+  font-size: 1.8rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.studioPage .dropZone strong {
+  color: var(--studio-ink);
+  font-size: 1rem;
+  font-weight: 950;
+}
+
+.studioPage .dropZone small {
+  color: var(--studio-muted);
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+
+.studioPage .primaryButton,
+.studioPage .secondaryButton,
+.studioPage .compactButton,
+.studioPage .ghostButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 1px solid var(--studio-line);
+  border-radius: 9px;
+  cursor: pointer;
+  font-size: 0.84rem;
+  font-weight: 900;
+  line-height: 1;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease;
+}
+
+.studioPage .secondaryButton,
+.studioPage .compactButton,
+.studioPage .ghostButton {
+  min-height: 36px;
+  background: #ffffff;
+  padding: 0 0.85rem;
+  color: #4f4a43;
+}
+
+.studioPage .secondaryButton:hover,
+.studioPage .secondaryButton:focus-visible,
+.studioPage .compactButton:hover,
+.studioPage .compactButton:focus-visible,
+.studioPage .ghostButton:hover,
+.studioPage .ghostButton:focus-visible {
+  border-color: var(--studio-yellow);
+  color: var(--studio-ink);
+  outline: 0;
+}
+
+.studioPage .primaryButton {
+  min-height: 44px;
+  border-color: var(--studio-ink);
+  background: var(--studio-ink);
+  color: #ffffff;
+  padding: 0 1rem;
+}
+
+.studioPage .primaryButton:hover,
+.studioPage .primaryButton:focus-visible {
+  border-color: var(--studio-yellow);
+  background: var(--studio-yellow);
+  color: var(--studio-ink);
+  outline: 0;
+}
+
+.studioPage .buttonIcon {
+  display: grid;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  color: inherit;
+  line-height: 1;
+}
+
+.studioPage .previewGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.studioPage .previewTile {
+  position: relative;
+  display: grid;
+  gap: 0.45rem;
+  min-width: 0;
+  border: 1px solid var(--studio-line);
+  border-radius: 12px;
+  background: #ffffff;
+  padding: 0.5rem;
+}
+
+.studioPage .previewImage {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  border-radius: 9px;
+  background: #efede8;
+}
+
+.studioPage .previewImage img {
+  object-fit: cover;
+}
+
+.studioPage .previewMeta {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+  padding-right: 1.7rem;
+}
+
+.studioPage .previewMeta strong,
+.studioPage .previewMeta span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.studioPage .previewMeta strong {
+  color: var(--studio-ink);
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
+.studioPage .previewMeta span {
+  color: var(--studio-muted);
+  font-size: 0.7rem;
+  font-weight: 750;
+}
+
+.studioPage .removeButton {
+  position: absolute;
+  right: 0.48rem;
+  bottom: 0.48rem;
+  display: grid;
+  width: 23px;
+  height: 23px;
+  place-items: center;
+  border: 1px solid var(--studio-line);
+  border-radius: 7px;
+  background: #ffffff;
+  cursor: pointer;
+  color: #4f4a43;
+  font-size: 0.68rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.studioPage .removeButton:hover,
+.studioPage .removeButton:focus-visible {
+  border-color: #cf3b27;
+  color: #cf3b27;
+  outline: 0;
+}
+
+.studioPage .emptyPreview {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.studioPage .emptyPreview span {
+  display: grid;
+  min-height: 82px;
+  place-items: end start;
+  border: 1px solid var(--studio-line);
+  border-radius: 12px;
+  background: #fbfaf7;
+  padding: 0.55rem;
+  color: #9a948a;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.studioPage .platformFieldset,
+.studioPage .goalFieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.studioPage .platformFieldset legend,
+.studioPage .goalFieldset legend,
+.studioPage .controlLabel,
+.studioPage .promptField > span,
+.studioPage .formGrid label > span {
+  display: block;
+  margin-bottom: 0.45rem;
+  color: #4f4a43;
+  font-size: 0.76rem;
+  font-weight: 950;
+}
+
+.studioPage .platformGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.studioPage .platformOption,
+.studioPage .goalOption {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 0.45rem;
+  border: 1px solid var(--studio-line);
+  border-radius: 9px;
+  background: #fbfaf7;
+  cursor: pointer;
+  padding: 0.52rem 0.62rem;
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease;
+}
+
+.studioPage .platformOption:has(input:checked),
+.studioPage .goalOption:has(input:checked) {
+  border-color: var(--studio-yellow);
+  background: rgba(255, 201, 0, 0.16);
+}
+
+.studioPage .platformOption input,
+.studioPage .goalOption input {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  flex: 0 0 auto;
+  accent-color: var(--studio-yellow);
+}
+
+.studioPage .platformOption span {
+  min-width: 0;
+}
+
+.studioPage .platformOption strong,
+.studioPage .goalOption span {
+  overflow: hidden;
+  color: var(--studio-ink);
+  font-size: 0.78rem;
+  font-weight: 850;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.studioPage .selectedPlatformNote {
+  display: grid;
+  gap: 0.2rem;
+  border: 1px solid var(--studio-line);
+  border-left: 4px solid var(--studio-yellow);
+  border-radius: 10px;
+  background: #fffdf2;
+  padding: 0.7rem 0.8rem;
+}
+
+.studioPage .selectedPlatformNote strong {
+  color: var(--studio-ink);
+  font-size: 0.82rem;
+  font-weight: 950;
+}
+
+.studioPage .selectedPlatformNote span {
+  color: var(--studio-muted);
+  font-size: 0.82rem;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.studioPage .formGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.studioPage .formGrid label,
+.studioPage .promptField {
+  display: grid;
+  min-width: 0;
+}
+
+.studioPage .formGrid input,
+.studioPage .promptField textarea {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--studio-line);
+  border-radius: 9px;
+  background: #fbfaf7;
+  color: var(--studio-ink);
+  outline: 0;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    background-color 160ms ease;
+}
+
+.studioPage .formGrid input {
+  min-height: 42px;
+  padding: 0 0.7rem;
+  font-size: 0.88rem;
+  font-weight: 650;
+}
+
+.studioPage .promptField textarea {
+  min-height: 118px;
+  resize: vertical;
+  padding: 0.7rem;
+  font-size: 0.88rem;
+  font-weight: 650;
+  line-height: 1.45;
+}
+
+.studioPage .formGrid input:focus,
+.studioPage .promptField textarea:focus {
+  border-color: var(--studio-yellow);
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(255, 201, 0, 0.2);
+}
+
+.studioPage .controlGroup,
+.studioPage .goalFieldset,
+.studioPage .promptField {
+  display: grid;
+  gap: 0;
+}
+
+.studioPage .segmentedControl {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.studioPage .segmentedControl button {
+  min-height: 34px;
+  border: 1px solid var(--studio-line);
+  border-radius: 999px;
+  background: #fbfaf7;
+  cursor: pointer;
+  padding: 0.35rem 0.72rem;
+  color: var(--studio-ink);
+  font-size: 0.78rem;
+  font-weight: 850;
+}
+
+.studioPage .segmentedControl button.isSelected {
+  border-color: var(--studio-yellow);
+  background: rgba(255, 201, 0, 0.18);
+}
+
+.studioPage .segmentedControl button:focus-visible {
+  outline: 3px solid rgba(255, 201, 0, 0.24);
+  outline-offset: 2px;
+}
+
+.studioPage .goalGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.studioPage .briefPanel {
+  display: grid;
+  gap: 0.75rem;
+  border: 1px solid var(--studio-line);
+  border-radius: 12px;
+  background: #111111;
+  padding: 0.9rem;
+  color: #ffffff;
+}
+
+.studioPage .briefHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
+.studioPage .briefHeader h2 {
+  margin: 0;
+  color: #ffffff;
+  font-size: 0.96rem;
+  font-weight: 950;
+}
+
+.studioPage .briefHeader span {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  border-radius: 999px;
+  background: var(--studio-yellow);
+  color: var(--studio-ink);
+  padding: 0 0.65rem;
+  font-size: 0.76rem;
+  font-weight: 950;
+}
+
+.studioPage .briefList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.studioPage .briefList span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 0.35rem 0.58rem;
+  color: #ffffff;
+  font-size: 0.74rem;
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.studioPage .goalSummary,
+.studioPage .promptSummary {
+  display: grid;
+  gap: 0.25rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  padding-top: 0.7rem;
+}
+
+.studioPage .goalSummary strong,
+.studioPage .promptSummary strong {
+  color: #ffffff;
+  font-size: 0.78rem;
+  font-weight: 950;
+}
+
+.studioPage .goalSummary p,
+.studioPage .promptSummary p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.82rem;
+  font-weight: 650;
+  line-height: 1.4;
+}
+
+.studioPage .briefPanel .primaryButton {
+  width: 100%;
+  border-color: var(--studio-yellow);
+  background: var(--studio-yellow);
+  color: var(--studio-ink);
+}
+
+.studioPage .briefPanel .primaryButton:hover,
+.studioPage .briefPanel .primaryButton:focus-visible {
+  background: #ffffff;
+  border-color: #ffffff;
+}
+
+.studioPage .statusMessage {
+  margin: 0;
+  border: 1px solid rgba(255, 201, 0, 0.42);
+  border-radius: 9px;
+  background: rgba(255, 201, 0, 0.12);
+  padding: 0.6rem;
+  color: #ffffff !important;
+  font-size: 0.82rem !important;
+  font-weight: 800 !important;
+  line-height: 1.35 !important;
+}
+
+@media (max-width: 1040px) {
+  .studioPage .studioWorkspace {
+    grid-template-columns: 1fr;
+  }
+
+  .studioPage .dropZone {
+    min-height: 220px;
+  }
+}
+
+@media (max-width: 720px) {
+  .studioPage {
+    padding: 0 10px 18px;
+  }
+
+  .studioPage .studioTopBar {
+    align-items: flex-start;
+    flex-direction: column;
+    min-height: auto;
+    padding: 0.8rem 0;
+  }
+
+  .studioPage .studioTitleBlock {
+    text-align: left;
+  }
+
+  .studioPage .studioWorkspace,
+  .studioPage .uploadColumn,
+  .studioPage .formColumn {
+    border-radius: 12px;
+  }
+
+  .studioPage .studioWorkspace {
+    padding: 0.75rem;
+  }
+
+  .studioPage .workspaceHeader {
+    flex-direction: column;
+  }
+
+  .studioPage .platformGrid,
+  .studioPage .formGrid,
+  .studioPage .goalGrid,
+  .studioPage .previewGrid,
+  .studioPage .emptyPreview {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Polished bilingual Studio refresh. */
+.studioPage {
+  --studio-canvas: #f3f0e8;
+  --studio-ink: #030303;
+  --studio-line: #ded9cd;
+  --studio-muted: #655f55;
+  --studio-paper: #fffefa;
+  --studio-yellow: var(--yellow);
+  background:
+    linear-gradient(90deg, rgba(3, 3, 3, 0.035) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(3, 3, 3, 0.035) 1px, transparent 1px),
+    #fffefa;
+  background-size: 32px 32px;
+  color: var(--studio-ink);
+  font-family:
+    "Segoe UI",
+    "Noto Sans Devanagari",
+    "Mangal",
+    Arial,
+    Helvetica,
+    sans-serif;
+  padding: 0 20px 28px;
+}
+
+.studioPage .studioTopBar {
+  position: sticky;
+  z-index: 20;
+  top: 0;
+  display: grid;
+  grid-template-columns: minmax(250px, 1fr) auto minmax(250px, 1fr);
+  align-items: center;
+  width: min(1460px, 100%);
+  min-height: 76px;
+  border-bottom: 1px solid rgba(3, 3, 3, 0.08);
+  background: rgba(255, 254, 250, 0.92);
+  backdrop-filter: blur(18px);
+}
+
+.studioPage .studioBrand {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  gap: 0.75rem;
+  justify-self: start;
+}
+
+.studioPage .brandMark {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 2px solid var(--studio-ink);
+  border-radius: 12px;
+  background: var(--studio-yellow);
+  box-shadow: 4px 4px 0 var(--studio-ink);
+  color: var(--studio-ink);
+  font-size: 0.9rem;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.studioPage .studioBrand span:last-child {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.studioPage .studioBrand strong {
+  overflow: hidden;
+  color: var(--studio-ink);
+  font-size: 0.98rem;
+  font-weight: 900;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.studioPage .studioBrand small {
+  overflow: hidden;
+  color: var(--studio-muted);
+  font-size: 0.74rem;
+  font-weight: 750;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.studioPage .studioNav {
+  display: inline-flex;
+  align-items: center;
+  justify-self: center;
+  gap: 0.25rem;
+  border: 1px solid var(--studio-line);
+  border-radius: 999px;
+  background: #ffffff;
+  padding: 0.25rem;
+  box-shadow: 0 10px 28px rgba(3, 3, 3, 0.06);
+}
+
+.studioPage .studioNav a {
+  display: inline-grid;
+  min-height: 36px;
+  place-items: center;
+  border-radius: 999px;
+  color: #3d3933;
+  padding: 0 1rem;
+  font-size: 0.82rem;
+  font-weight: 850;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.studioPage .studioNav a:hover,
+.studioPage .studioNav a:focus-visible {
+  background: var(--studio-ink);
+  color: #ffffff;
+  outline: 0;
+}
+
+.studioPage .studioTopActions {
+  display: flex;
+  align-items: center;
+  justify-self: end;
+  gap: 0.7rem;
+  min-width: 0;
+}
+
+.studioPage .studioLanguage {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  border: 1px solid var(--studio-ink);
+  border-radius: 999px;
+  background: var(--studio-ink);
+  padding: 0.22rem;
+}
+
+.studioPage .studioLanguage button {
+  display: grid;
+  min-height: 30px;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.72);
+  cursor: pointer;
+  padding: 0 0.7rem;
+  font-size: 0.76rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.studioPage .studioLanguage button.isActive {
+  background: var(--studio-yellow);
+  color: var(--studio-ink);
+}
+
+.studioPage .studioLanguage button:focus-visible {
+  outline: 2px solid var(--studio-yellow);
+  outline-offset: 2px;
+}
+
+.studioPage .topPhotoCount {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  border: 1px solid var(--studio-line);
+  border-radius: 999px;
+  background: #ffffff;
+  padding: 0 0.8rem;
+  color: #3d3933;
+  font-size: 0.78rem;
+  font-weight: 850;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.studioPage .studioWorkspace {
+  grid-template-columns: minmax(360px, 0.9fr) minmax(620px, 1.1fr);
+  gap: 1.1rem;
+  width: min(1460px, 100%);
+  min-height: calc(100vh - 104px);
+  border: 1px solid var(--studio-ink);
+  border-radius: 24px;
+  background: var(--studio-ink);
+  padding: 1rem;
+  box-shadow:
+    0 24px 80px rgba(3, 3, 3, 0.16),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+.studioPage .uploadColumn,
+.studioPage .formColumn {
+  border-radius: 18px;
+  box-shadow: none;
+}
+
+.studioPage .uploadColumn {
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background:
+    radial-gradient(circle at 18% 8%, rgba(255, 201, 0, 0.18), transparent 28%),
+    #151515;
+  color: #ffffff;
+  padding: clamp(1rem, 2vw, 1.25rem);
+}
+
+.studioPage .formColumn {
+  border: 1px solid rgba(255, 255, 255, 0.82);
+  background: var(--studio-paper);
+  padding: clamp(1rem, 2vw, 1.25rem);
+}
+
+.studioPage .workspaceHeader {
+  align-items: flex-start;
+}
+
+.studioPage .eyebrow {
+  color: #9a8200;
+  font-size: 0.72rem;
+  font-weight: 950;
+}
+
+.studioPage .uploadColumn .eyebrow {
+  color: var(--studio-yellow);
+}
+
+.studioPage .workspaceHeader h1,
+.studioPage .workspaceHeader h2 {
+  font-size: clamp(1.75rem, 3vw, 2.75rem);
+  font-weight: 900;
+  line-height: 0.98;
+}
+
+.studioPage .uploadColumn .workspaceHeader h1,
+.studioPage .uploadColumn .workspaceHeader p {
+  color: #ffffff;
+}
+
+.studioPage .workspaceHeader p {
+  color: var(--studio-muted);
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.studioPage .uploadColumn .workspaceHeader p {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.studioPage .photoCounter {
+  border-color: var(--studio-yellow);
+  background: var(--studio-yellow);
+  box-shadow: 0 0 0 5px rgba(255, 201, 0, 0.12);
+}
+
+.studioPage .dropZone {
+  min-height: clamp(300px, 42vh, 480px);
+  border: 1.5px dashed rgba(255, 201, 0, 0.7);
+  border-radius: 18px;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    rgba(255, 255, 255, 0.045);
+  background-size: 28px 28px;
+  color: #ffffff;
+}
+
+.studioPage .dropZone.isDragging {
+  border-color: var(--studio-yellow);
+  background-color: rgba(255, 201, 0, 0.1);
+}
+
+.studioPage .uploadIcon {
+  width: 54px;
+  height: 54px;
+  border-color: var(--studio-yellow);
+  border-radius: 16px;
+  background: var(--studio-yellow);
+  box-shadow: 5px 5px 0 rgba(0, 0, 0, 0.9);
+}
+
+.studioPage .dropZone strong {
+  color: #ffffff;
+  font-size: 1.08rem;
+}
+
+.studioPage .dropZone small {
+  color: rgba(255, 255, 255, 0.66);
+}
+
+.studioPage .uploadColumn .secondaryButton {
+  border-color: rgba(255, 255, 255, 0.22);
+  background: #ffffff;
+  color: var(--studio-ink);
+}
+
+.studioPage .uploadColumn .secondaryButton:hover,
+.studioPage .uploadColumn .secondaryButton:focus-visible {
+  border-color: var(--studio-yellow);
+  background: var(--studio-yellow);
+}
+
+.studioPage .emptyPreview {
+  gap: 0.65rem;
+}
+
+.studioPage .emptyPreview span {
+  min-height: 96px;
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.58);
+}
+
+.studioPage .previewTile {
+  border: 0;
+  background: #ffffff;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22);
+}
+
+.studioPage .formHeader {
+  border-bottom: 1px solid var(--studio-line);
+  padding-bottom: 1rem;
+}
+
+.studioPage .ghostButton {
+  min-height: 38px;
+  border-color: var(--studio-line);
+  background: #ffffff;
+}
+
+.studioPage .platformGrid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.studioPage .platformOption,
+.studioPage .goalOption,
+.studioPage .formGrid input,
+.studioPage .promptField textarea,
+.studioPage .segmentedControl button {
+  border-color: #d7d1c4;
+  background: #ffffff;
+}
+
+.studioPage .platformOption,
+.studioPage .goalOption {
+  min-height: 44px;
+}
+
+.studioPage .platformOption:has(input:checked),
+.studioPage .goalOption:has(input:checked),
+.studioPage .segmentedControl button.isSelected {
+  border-color: var(--studio-ink);
+  background: var(--studio-yellow);
+  box-shadow: 3px 3px 0 var(--studio-ink);
+}
+
+.studioPage .platformOption input,
+.studioPage .goalOption input {
+  accent-color: var(--studio-ink);
+}
+
+.studioPage .selectedPlatformNote {
+  border-color: #d7d1c4;
+  border-left-color: var(--studio-ink);
+  background:
+    linear-gradient(90deg, rgba(255, 201, 0, 0.16), transparent 72%),
+    #ffffff;
+}
+
+.studioPage .formGrid input,
+.studioPage .promptField textarea {
+  min-height: 44px;
+  font-size: 0.92rem;
+}
+
+.studioPage .formGrid input:focus,
+.studioPage .promptField textarea:focus {
+  border-color: var(--studio-ink);
+  box-shadow: 0 0 0 4px rgba(255, 201, 0, 0.28);
+}
+
+.studioPage .segmentedControl button {
+  border-radius: 999px;
+}
+
+.studioPage .briefPanel {
+  border: 0;
+  border-radius: 18px;
+  background:
+    linear-gradient(135deg, rgba(255, 201, 0, 0.18), transparent 42%),
+    #111111;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.studioPage .statusMessage {
+  color: #ffffff !important;
+}
+
+@media (max-width: 1120px) {
+  .studioPage .studioTopBar {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+    padding: 0.8rem 0;
+  }
+
+  .studioPage .studioBrand,
+  .studioPage .studioNav,
+  .studioPage .studioTopActions {
+    justify-self: stretch;
+  }
+
+  .studioPage .studioNav,
+  .studioPage .studioTopActions {
+    justify-content: center;
+  }
+
+  .studioPage .studioWorkspace {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .studioPage {
+    padding: 0 10px 18px;
+  }
+
+  .studioPage .studioTopActions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .studioPage .studioNav {
+    flex-wrap: wrap;
+    border-radius: 18px;
+  }
+
+  .studioPage .studioNav a {
+    flex: 1 1 86px;
+  }
+
+  .studioPage .studioWorkspace {
+    border-radius: 18px;
+    padding: 0.7rem;
+  }
+
+  .studioPage .uploadColumn,
+  .studioPage .formColumn {
+    border-radius: 14px;
+  }
+
+  .studioPage .workspaceHeader {
+    flex-direction: column;
+  }
+
+  .studioPage .dropZone {
+    min-height: 240px;
+  }
+
+  .studioPage .platformGrid,
+  .studioPage .formGrid,
+  .studioPage .goalGrid,
+  .studioPage .previewGrid,
+  .studioPage .emptyPreview {
+    grid-template-columns: 1fr;
+  }
+}
+
 * {
   box-sizing: border-box;
 }
