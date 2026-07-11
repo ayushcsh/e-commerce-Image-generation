@@ -1,4 +1,6 @@
 import Image from "next/image";
+import Link from "next/link";
+import { auth, signOut } from "@/auth";
 
 const navItems = [
   { label: "Home", hindi: "होम", href: "#home" },
@@ -75,7 +77,10 @@ function AccentO() {
   );
 }
 
-export default function Home() {
+export default async function Home() {
+  const session = await auth();
+  const studioHref = session ? "/studio" : "/login?callbackUrl=%2Fstudio";
+
   return (
     <main className="page">
       <input
@@ -107,6 +112,41 @@ export default function Home() {
               <span>हिंदी</span>
             </label>
 
+            {session?.user ? (
+              <div className="authTools">
+                <Link className="authAccount" href="/studio">
+                  {session.user.image ? (
+                    <Image
+                      className="authAvatar"
+                      src={session.user.image}
+                      alt=""
+                      width={26}
+                      height={26}
+                      unoptimized
+                    />
+                  ) : (
+                    <span className="authAvatar authAvatarFallback" aria-hidden="true">
+                      {(session.user.name || session.user.email || "U").charAt(0).toUpperCase()}
+                    </span>
+                  )}
+                  <span>{session.user.name?.split(" ")[0] || "Studio"}</span>
+                </Link>
+                <form
+                  action={async () => {
+                    "use server";
+                    await signOut({ redirectTo: "/" });
+                  }}
+                >
+                  <button className="authSignOut" type="submit">
+                    Sign out
+                  </button>
+                </form>
+              </div>
+            ) : (
+              <Link className="authSignIn" href="/login">
+                Sign in
+              </Link>
+            )}
           </div>
         </header>
 
@@ -151,7 +191,7 @@ export default function Home() {
                 </span>
               </p>
 
-              <a className="getStarted" href="/studio" aria-label="Get started">
+              <a className="getStarted" href={studioHref} aria-label="Get started">
                 <span className="langEnglish">GET STARTED</span>
                 <span className="langHindi">शुरू करें</span>
               </a>
@@ -219,32 +259,27 @@ export default function Home() {
             </svg>
 
             <div className="pathwayNodes">
-            {steps.map((step, index) => (
-              <article className="pathStep" key={step.label}>
-                <div className={`aiVideo aiVideo${index + 1}`} aria-label={`${step.label} AI video preview`} role="img">
-                  <span className="videoStage" />
-                  <span className="videoProduct" />
-                  <span className="videoGhost videoGhostOne" />
-                  <span className="videoGhost videoGhostTwo" />
-                  <span className="videoScan" />
-                  <span className="videoSpark videoSparkOne" />
-                  <span className="videoSpark videoSparkTwo" />
-                  <span className="videoExport" />
-                </div>
+              {steps.map((step, index) => (
+                <article className="pathStep" key={step.label}>
+                  <div className={`aiVideo aiVideo${index + 1}`} aria-label={`${step.label} AI video preview`} role="img">
+                    <span className="videoStage" />
+                    <span className="videoProduct" />
+                    <span className="videoExport" />
+                  </div>
 
-                <div className="pathStepCopy">
-                  <span className="pathStepNumber">{String(index + 1).padStart(2, "0")}</span>
-                  <strong>
-                    <span className="langEnglish">{step.label}</span>
-                    <span className="langHindi">{step.hindi}</span>
-                  </strong>
-                  <small>
-                    <span className="langEnglish">{step.detail}</span>
-                    <span className="langHindi">{step.hindiDetail}</span>
-                  </small>
-                </div>
-              </article>
-            ))}
+                  <div className="pathStepCopy">
+                    <span className="pathStepNumber">{String(index + 1).padStart(2, "0")}</span>
+                    <strong>
+                      <span className="langEnglish">{step.label}</span>
+                      <span className="langHindi">{step.hindi}</span>
+                    </strong>
+                    <small>
+                      <span className="langEnglish">{step.detail}</span>
+                      <span className="langHindi">{step.hindiDetail}</span>
+                    </small>
+                  </div>
+                </article>
+              ))}
             </div>
           </div>
         </div>
@@ -302,22 +337,6 @@ export default function Home() {
             <h2>Let&apos;s get started.</h2>
             <p>Send one product photo and we&apos;ll plan a sharper image set for your store.</p>
             <a href="mailto:hello@productvisuals.ai">Let&apos;s Chat</a>
-          </div>
-
-          <div className="footerIllustration" aria-hidden="true">
-            <span className="footerBurst" />
-            <span className="footerHand" />
-            <span className="footerPalm" />
-            <span className="footerFinger footerFingerOne" />
-            <span className="footerFinger footerFingerTwo" />
-            <span className="footerFinger footerFingerThree" />
-            <span className="footerEye footerEyeOne" />
-            <span className="footerEye footerEyeTwo" />
-            <span className="footerSmile" />
-            <span className="footerShape footerShapeOne" />
-            <span className="footerShape footerShapeTwo" />
-            <span className="footerShape footerShapeThree" />
-            <span className="footerShape footerShapeFour" />
           </div>
         </div>
 

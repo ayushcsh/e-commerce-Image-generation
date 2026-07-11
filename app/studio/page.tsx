@@ -2,10 +2,13 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   type ChangeEvent,
+  type CSSProperties,
   type DragEvent,
   type FormEvent,
+  type ReactNode,
   useEffect,
   useMemo,
   useRef,
@@ -17,235 +20,109 @@ type UploadedImage = {
   name: string;
   size: string;
   url: string;
+  file: File;
 };
 
 type BriefState = {
-  platform: string;
   productName: string;
   category: string;
-  audience: string;
-  priceRange: string;
+  brandName: string;
   sku: string;
-  imageCount: string;
   background: string;
-  aspectRatio: string;
+  customBackgroundColor: string;
+  customMarketplace: string;
+  material: string;
+  dimensions: string;
+  weight: string;
+  fontStyle: string;
+  aiStyle: string;
+  textOnImage: string;
+  language: string;
+  imageFormat: string;
+  resolution: string;
+  description: string;
+  targetAudience: string;
+  sellingPrice: string;
+  mrp: string;
+  discountPercent: string;
+  specialOffers: string;
+  warranty: string;
+  countryOfOrigin: string;
+  packageContents: string;
   customPrompt: string;
 };
 
-type Language = "en" | "hi";
+const MAX_PHOTOS = 12;
+const MAX_FEATURES = 6;
+const MIN_FEATURES = 3;
+const MAX_PRODUCT_COLORS = 6;
+const MAX_BRAND_COLORS = 4;
 
-const maxPhotos = 12;
-
-const platforms = [
-  {
-    name: "Amazon",
-    note: "Clean hero image, details, scale, and lifestyle set",
-    noteHi: "क्लीन हीरो इमेज, डिटेल, स्केल और लाइफस्टाइल सेट"
-  },
-  {
-    name: "Shopify",
-    note: "Storefront hero, collection thumbnails, and ad crops",
-    noteHi: "स्टोरफ्रंट हीरो, कलेक्शन थंबनेल और ऐड क्रॉप"
-  },
-  {
-    name: "Etsy",
-    note: "Handmade feel, closeups, texture, and warm lifestyle scenes",
-    noteHi: "हैंडमेड फील, क्लोजअप, टेक्सचर और वार्म लाइफस्टाइल सीन"
-  },
-  {
-    name: "eBay",
-    note: "Clear condition shots, variants, and honest detail frames",
-    noteHi: "कंडीशन शॉट, वैरिएंट और साफ डिटेल फ्रेम"
-  },
-  {
-    name: "Flipkart",
-    note: "Catalog-ready angles, feature callouts, and clean backgrounds",
-    noteHi: "कैटलॉग-रेडी एंगल, फीचर कॉलआउट और क्लीन बैकग्राउंड"
-  },
-  {
-    name: "Meesho",
-    note: "Fast social commerce visuals with simple, bright product focus",
-    noteHi: "सिंपल, ब्राइट और सोशल कॉमर्स के लिए तेज विजुअल"
-  }
+const CATEGORY_SUGGESTIONS = [
+  "Electronics",
+  "Clothing",
+  "Furniture",
+  "Beauty",
+  "Grocery",
+  "Home & Kitchen",
+  "Sports & Outdoors",
+  "Toys & Games",
+  "Health & Personal Care"
 ];
 
-const imageGoals = [
-  "Main listing image",
-  "Detail closeups",
-  "Lifestyle scene",
-  "Size or scale shot",
-  "Ad creative",
-  "Variant grid"
+const MARKETPLACES = ["Amazon", "Flipkart", "Meesho", "Myntra", "Ajio", "Shopify", "WooCommerce", "Custom"];
+
+const BACKGROUND_OPTIONS = ["Pure White", "Transparent", "Lifestyle", "Gradient", "Custom Color"];
+
+const FONT_STYLES = ["Modern", "Classic", "Bold", "Elegant", "Minimal", "Playful"];
+
+const IMAGE_TYPES = [
+  "Main Listing Image",
+  "Infographic",
+  "Feature Highlight",
+  "Lifestyle Image",
+  "Comparison Image",
+  "Size Guide",
+  "Packaging Showcase",
+  "Premium Banner"
 ];
 
-const initialGoals = [imageGoals[0], imageGoals[1], imageGoals[2]];
+const AI_IMAGE_STYLES = ["Minimal", "Premium", "Luxury", "Modern", "Colorful", "Professional"];
 
-const backgrounds = [
-  "Clean studio white",
-  "Soft shadow",
-  "Premium dark",
-  "Lifestyle room",
-  "Seasonal campaign"
-];
+const TEXT_ON_IMAGE_OPTIONS = ["No Text", "Minimal Text", "Feature Highlights", "Promotional"];
 
-const aspectRatios = ["1:1 square", "4:5 portrait", "16:9 banner", "Marketplace mix"];
+const LANGUAGE_OPTIONS = ["English", "Hindi", "Both"];
 
-const goalLabels: Record<Language, Record<string, string>> = {
-  en: Object.fromEntries(imageGoals.map((goal) => [goal, goal])),
-  hi: {
-    "Main listing image": "मुख्य लिस्टिंग इमेज",
-    "Detail closeups": "डिटेल क्लोजअप",
-    "Lifestyle scene": "लाइफस्टाइल सीन",
-    "Size or scale shot": "साइज / स्केल शॉट",
-    "Ad creative": "विज्ञापन क्रिएटिव",
-    "Variant grid": "वैरिएंट ग्रिड"
-  }
-};
+const IMAGE_FORMATS = ["PNG", "JPG", "WebP"];
 
-const backgroundLabels: Record<Language, Record<string, string>> = {
-  en: Object.fromEntries(backgrounds.map((background) => [background, background])),
-  hi: {
-    "Clean studio white": "क्लीन स्टूडियो व्हाइट",
-    "Soft shadow": "सॉफ्ट शैडो",
-    "Premium dark": "प्रीमियम डार्क",
-    "Lifestyle room": "लाइफस्टाइल रूम",
-    "Seasonal campaign": "सीजनल कैंपेन"
-  }
-};
-
-const aspectRatioLabels: Record<Language, Record<string, string>> = {
-  en: Object.fromEntries(aspectRatios.map((ratio) => [ratio, ratio])),
-  hi: {
-    "1:1 square": "1:1 स्क्वेयर",
-    "4:5 portrait": "4:5 पोर्ट्रेट",
-    "16:9 banner": "16:9 बैनर",
-    "Marketplace mix": "मार्केटप्लेस मिक्स"
-  }
-};
-
-const studioText = {
-  en: {
-    brand: "AI Product Image Studio",
-    brandSub: "Marketplace visuals from product photos",
-    navHome: "Home",
-    navPhotos: "Photos",
-    navBrief: "Brief",
-    newBrief: "New image brief",
-    photosSelected: (count: number, max: number) => `${count}/${max} photos selected`,
-    uploadEyebrow: "Upload",
-    uploadTitle: "Product photo stack",
-    uploadDesc: "Upload front, side, detail, packaging, and variant shots in one clean batch.",
-    dropTitle: "Drop product photos",
-    dropHint: (max: number) => `PNG, JPG, or WEBP. Up to ${max} images.`,
-    choosePhotos: "Choose photos",
-    emptySlots: ["Front", "Side", "Detail", "Scale"],
-    briefEyebrow: "Listing brief",
-    formTitle: "Build the image brief",
-    formDesc: "Add marketplace, buyer, style, format, and custom directions for the final image set.",
-    reset: "Reset",
-    platformLegend: "Ecommerce platform",
-    focus: "focus",
-    fields: {
-      productName: "Product name",
-      category: "Category",
-      audience: "Target buyer",
-      priceRange: "Price range",
-      sku: "SKU or variant",
-      imageCount: "Number of images",
-      background: "Background style",
-      format: "Image format",
-      goals: "Image goals",
-      prompt: "Custom prompt"
-    },
-    placeholders: {
-      productName: "Wireless desk lamp",
-      category: "Home office accessories",
-      audience: "Students, creators, home workers",
-      priceRange: "$25 - $40",
-      sku: "Black, USB-C, pack of 1",
-      prompt:
-        "Example: keep the original color, add soft shadows, show premium packaging, create one lifestyle scene for ads."
-    },
-    readyBrief: "Ready brief",
-    selectedGoals: "Selected goals",
-    noGoals: "No image goals selected",
-    customization: "Customization",
-    createBrief: "Create image brief",
-    pendingProduct: "Product name pending",
-    pendingCategory: "Category pending",
-    outputs: (count: string) => `${count || "8"} outputs`,
-    photos: (count: number) => `${count} product photo${count === 1 ? "" : "s"}`,
-    addPhotoStatus: "Add at least one product photo before creating the brief.",
-    readyStatus: (count: number, platform: string) =>
-      `Brief ready: ${count} photo${count === 1 ? "" : "s"} for ${platform}.`
-  },
-  hi: {
-    brand: "AI प्रोडक्ट इमेज स्टूडियो",
-    brandSub: "प्रोडक्ट फोटो से मार्केटप्लेस विजुअल",
-    navHome: "होम",
-    navPhotos: "फोटो",
-    navBrief: "ब्रीफ",
-    newBrief: "नया इमेज ब्रीफ",
-    photosSelected: (count: number, max: number) => `${count}/${max} फोटो चुने गए`,
-    uploadEyebrow: "अपलोड",
-    uploadTitle: "प्रोडक्ट फोटो स्टैक",
-    uploadDesc: "फ्रंट, साइड, डिटेल, पैकेजिंग और वैरिएंट फोटो एक साथ अपलोड करें।",
-    dropTitle: "प्रोडक्ट फोटो यहाँ ड्रॉप करें",
-    dropHint: (max: number) => `PNG, JPG या WEBP. अधिकतम ${max} इमेज।`,
-    choosePhotos: "फोटो चुनें",
-    emptySlots: ["फ्रंट", "साइड", "डिटेल", "स्केल"],
-    briefEyebrow: "लिस्टिंग ब्रीफ",
-    formTitle: "इमेज ब्रीफ बनाएं",
-    formDesc: "मार्केटप्लेस, खरीदार, स्टाइल, फॉर्मेट और कस्टम निर्देश जोड़ें।",
-    reset: "रीसेट",
-    platformLegend: "ई-कॉमर्स प्लेटफॉर्म",
-    focus: "फोकस",
-    fields: {
-      productName: "प्रोडक्ट नाम",
-      category: "कैटेगरी",
-      audience: "टारगेट खरीदार",
-      priceRange: "प्राइस रेंज",
-      sku: "SKU या वैरिएंट",
-      imageCount: "इमेज की संख्या",
-      background: "बैकग्राउंड स्टाइल",
-      format: "इमेज फॉर्मेट",
-      goals: "इमेज गोल",
-      prompt: "कस्टम प्रॉम्प्ट"
-    },
-    placeholders: {
-      productName: "Wireless desk lamp",
-      category: "Home office accessories",
-      audience: "Students, creators, home workers",
-      priceRange: "$25 - $40",
-      sku: "Black, USB-C, pack of 1",
-      prompt:
-        "उदाहरण: असली रंग रखें, सॉफ्ट शैडो जोड़ें, प्रीमियम पैकेजिंग दिखाएं, ads के लिए एक लाइफस्टाइल सीन बनाएं।"
-    },
-    readyBrief: "तैयार ब्रीफ",
-    selectedGoals: "चुने गए गोल",
-    noGoals: "कोई इमेज गोल नहीं चुना गया",
-    customization: "कस्टम निर्देश",
-    createBrief: "इमेज ब्रीफ बनाएं",
-    pendingProduct: "प्रोडक्ट नाम बाकी है",
-    pendingCategory: "कैटेगरी बाकी है",
-    outputs: (count: string) => `${count || "8"} आउटपुट`,
-    photos: (count: number) => `${count} प्रोडक्ट फोटो`,
-    addPhotoStatus: "ब्रीफ बनाने से पहले कम से कम एक प्रोडक्ट फोटो जोड़ें।",
-    readyStatus: (count: number, platform: string) =>
-      `${platform} के लिए ${count} फोटो का ब्रीफ तैयार है।`
-  }
-};
+const RESOLUTIONS = ["Standard", "HD", "4K"];
 
 const initialBrief: BriefState = {
-  platform: platforms[0].name,
   productName: "",
   category: "",
-  audience: "",
-  priceRange: "",
+  brandName: "",
   sku: "",
-  imageCount: "8",
-  background: backgrounds[0],
-  aspectRatio: aspectRatios[0],
+  background: BACKGROUND_OPTIONS[0],
+  customBackgroundColor: "#ffffff",
+  customMarketplace: "",
+  material: "",
+  dimensions: "",
+  weight: "",
+  fontStyle: FONT_STYLES[0],
+  aiStyle: AI_IMAGE_STYLES[0],
+  textOnImage: TEXT_ON_IMAGE_OPTIONS[0],
+  language: LANGUAGE_OPTIONS[0],
+  imageFormat: IMAGE_FORMATS[0],
+  resolution: RESOLUTIONS[1],
+  description: "",
+  targetAudience: "",
+  sellingPrice: "",
+  mrp: "",
+  discountPercent: "",
+  specialOffers: "",
+  warranty: "",
+  countryOfOrigin: "",
+  packageContents: "",
   customPrompt: ""
 };
 
@@ -265,16 +142,202 @@ function createImageId(file: File, index: number) {
   return `${file.name}-${file.lastModified}-${index}`;
 }
 
+function toggleValue(list: string[], value: string) {
+  return list.includes(value) ? list.filter((item) => item !== value) : [...list, value];
+}
+
+function PillGroup({
+  legend,
+  options,
+  value,
+  onChange
+}: {
+  legend: string;
+  options: string[];
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div className="controlGroup">
+      <span className="controlLabel">{legend}</span>
+      <div className="pillGroup">
+        {options.map((option) => (
+          <button
+            className={value === option ? "isSelected" : ""}
+            key={option}
+            type="button"
+            onClick={() => onChange(option)}
+          >
+            {option}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function CheckGrid({
+  legend,
+  hint,
+  options,
+  values,
+  onToggle,
+  columns = 3
+}: {
+  legend: ReactNode;
+  hint?: string;
+  options: string[];
+  values: string[];
+  onToggle: (option: string) => void;
+  columns?: number;
+}) {
+  return (
+    <fieldset className="checkFieldset">
+      <legend>{legend}</legend>
+      {hint ? <p className="fieldHint">{hint}</p> : null}
+      <div className="checkGrid" style={{ "--cols": columns } as CSSProperties}>
+        {options.map((option) => (
+          <label className="checkOption" key={option}>
+            <input type="checkbox" checked={values.includes(option)} onChange={() => onToggle(option)} />
+            <span>{option}</span>
+          </label>
+        ))}
+      </div>
+    </fieldset>
+  );
+}
+
+function ChipInput({
+  legend,
+  hint,
+  values,
+  onAdd,
+  onRemove,
+  placeholder,
+  max,
+  withColorPicker
+}: {
+  legend: string;
+  hint?: string;
+  values: string[];
+  onAdd: (value: string) => void;
+  onRemove: (value: string) => void;
+  placeholder?: string;
+  max?: number;
+  withColorPicker?: boolean;
+}) {
+  const [draft, setDraft] = useState("");
+  const atLimit = Boolean(max) && values.length >= (max ?? 0);
+
+  function commit() {
+    const trimmed = draft.trim();
+    if (!trimmed || atLimit) {
+      return;
+    }
+    onAdd(trimmed);
+    setDraft("");
+  }
+
+  return (
+    <div className="chipField">
+      <div className="chipFieldHead">
+        <span>{legend}</span>
+        {max ? (
+          <small>
+            {values.length}/{max}
+          </small>
+        ) : null}
+      </div>
+      {hint ? <p className="fieldHint">{hint}</p> : null}
+      <div className="chipInputRow">
+        <input
+          type="text"
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              commit();
+            }
+          }}
+          placeholder={placeholder}
+          disabled={atLimit}
+        />
+        {withColorPicker ? (
+          <input
+            className="colorPicker"
+            type="color"
+            aria-label={`Pick a color for ${legend}`}
+            onChange={(event) => {
+              if (atLimit) {
+                return;
+              }
+              onAdd(event.target.value);
+            }}
+          />
+        ) : null}
+        <button className="chipAddButton" type="button" onClick={commit} disabled={atLimit}>
+          Add
+        </button>
+      </div>
+      {values.length > 0 ? (
+        <div className="chipList">
+          {values.map((value) => (
+            <span className="chip" key={value}>
+              {withColorPicker && /^#([0-9a-f]{3}){1,2}$/i.test(value) ? (
+                <i className="chipSwatch" style={{ background: value }} aria-hidden="true" />
+              ) : null}
+              {value}
+              <button type="button" onClick={() => onRemove(value)} aria-label={`Remove ${value}`}>
+                &times;
+              </button>
+            </span>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function FormSection({
+  id,
+  eyebrow,
+  title,
+  description,
+  children
+}: {
+  id?: string;
+  eyebrow: string;
+  title: string;
+  description?: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="formSection" id={id}>
+      <div className="formSectionHead">
+        <p className="eyebrow">{eyebrow}</p>
+        <h2>{title}</h2>
+        {description ? <p className="sectionDesc">{description}</p> : null}
+      </div>
+      {children}
+    </section>
+  );
+}
+
 export default function StudioPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
   const imagesRef = useRef<UploadedImage[]>([]);
   const [images, setImages] = useState<UploadedImage[]>([]);
+  const [logo, setLogo] = useState<UploadedImage | null>(null);
   const [brief, setBrief] = useState<BriefState>(initialBrief);
-  const [selectedGoals, setSelectedGoals] = useState<string[]>(initialGoals);
-  const [language, setLanguage] = useState<Language>("en");
+  const [marketplaces, setMarketplaces] = useState<string[]>([]);
+  const [imageTypes, setImageTypes] = useState<string[]>([IMAGE_TYPES[0]]);
+  const [keyFeatures, setKeyFeatures] = useState<string[]>([]);
+  const [productColors, setProductColors] = useState<string[]>([]);
+  const [brandColors, setBrandColors] = useState<string[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
-  const text = studioText[language];
 
   useEffect(() => {
     imagesRef.current = images;
@@ -283,42 +346,15 @@ export default function StudioPage() {
   useEffect(() => {
     return () => {
       imagesRef.current.forEach((image) => URL.revokeObjectURL(image.url));
+      if (logo) {
+        URL.revokeObjectURL(logo.url);
+      }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const selectedPlatform = useMemo(
-    () => platforms.find((platform) => platform.name === brief.platform) ?? platforms[0],
-    [brief.platform]
-  );
-
-  const briefSummary = useMemo(
-    () => [
-      text.photos(images.length),
-      brief.platform,
-      brief.productName || text.pendingProduct,
-      brief.category || text.pendingCategory,
-      text.outputs(brief.imageCount),
-      backgroundLabels[language][brief.background] ?? brief.background,
-      aspectRatioLabels[language][brief.aspectRatio] ?? brief.aspectRatio
-    ],
-    [
-      brief.aspectRatio,
-      brief.background,
-      brief.category,
-      brief.imageCount,
-      brief.platform,
-      brief.productName,
-      images.length,
-      language,
-      text
-    ]
-  );
-
   function updateBrief(field: keyof BriefState, value: string) {
-    setBrief((current) => ({
-      ...current,
-      [field]: value
-    }));
+    setBrief((current) => ({ ...current, [field]: value }));
   }
 
   function addFiles(fileList: FileList | File[]) {
@@ -329,12 +365,13 @@ export default function StudioPage() {
     }
 
     setImages((current) => {
-      const openSlots = Math.max(0, maxPhotos - current.length);
+      const openSlots = Math.max(0, MAX_PHOTOS - current.length);
       const nextImages = incoming.slice(0, openSlots).map((file, index) => ({
         id: createImageId(file, index),
         name: file.name,
         size: formatBytes(file.size),
-        url: URL.createObjectURL(file)
+        url: URL.createObjectURL(file),
+        file
       }));
 
       if (nextImages.length > 0) {
@@ -371,84 +408,158 @@ export default function StudioPage() {
     addFiles(event.dataTransfer.files);
   }
 
-  function toggleGoal(goal: string) {
-    setSelectedGoals((current) =>
-      current.includes(goal)
-        ? current.filter((item) => item !== goal)
-        : [...current, goal]
-    );
+  function handleLogoChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file || !file.type.startsWith("image/")) {
+      return;
+    }
+
+    setLogo((current) => {
+      if (current) {
+        URL.revokeObjectURL(current.url);
+      }
+
+      return {
+        id: createImageId(file, 0),
+        name: file.name,
+        size: formatBytes(file.size),
+        url: URL.createObjectURL(file),
+        file
+      };
+    });
+  }
+
+  function removeLogo() {
+    setLogo((current) => {
+      if (current) {
+        URL.revokeObjectURL(current.url);
+      }
+      return null;
+    });
   }
 
   function resetBrief() {
     imagesRef.current.forEach((image) => URL.revokeObjectURL(image.url));
     imagesRef.current = [];
     setImages([]);
+    if (logo) {
+      URL.revokeObjectURL(logo.url);
+    }
+    setLogo(null);
     setBrief(initialBrief);
-    setSelectedGoals(initialGoals);
+    setMarketplaces([]);
+    setImageTypes([IMAGE_TYPES[0]]);
+    setKeyFeatures([]);
+    setProductColors([]);
+    setBrandColors([]);
     setStatusMessage("");
   }
+
+  const validationIssue = useMemo(() => {
+    if (images.length === 0) {
+      return "Add at least one product photo.";
+    }
+    if (!brief.productName.trim()) {
+      return "Add a product name.";
+    }
+    if (!brief.category.trim()) {
+      return "Add a product category.";
+    }
+    if (marketplaces.length === 0) {
+      return "Select at least one marketplace.";
+    }
+    return null;
+  }, [brief.category, brief.productName, images.length, marketplaces.length]);
+
+  const briefSummary = useMemo(() => {
+    const items = [
+      `${images.length} photo${images.length === 1 ? "" : "s"}`,
+      brief.productName || "Product name pending",
+      brief.category || "Category pending"
+    ];
+
+    if (marketplaces.length > 0) {
+      items.push(marketplaces.join(", "));
+    }
+
+    items.push(
+      brief.background === "Custom Color" ? `Custom ${brief.customBackgroundColor}` : brief.background
+    );
+
+    if (imageTypes.length > 0) {
+      items.push(`${imageTypes.length} image type${imageTypes.length === 1 ? "" : "s"}`);
+    }
+
+    items.push(brief.aiStyle);
+    items.push(`${brief.imageFormat} · ${brief.resolution}`);
+
+    return items;
+  }, [
+    brief.aiStyle,
+    brief.background,
+    brief.category,
+    brief.customBackgroundColor,
+    brief.imageFormat,
+    brief.productName,
+    brief.resolution,
+    imageTypes.length,
+    images.length,
+    marketplaces
+  ]);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (images.length === 0) {
-      setStatusMessage(text.addPhotoStatus);
-      fileInputRef.current?.focus();
+    if (validationIssue) {
+      setStatusMessage(validationIssue);
+      if (images.length === 0) {
+        fileInputRef.current?.focus();
+      }
       return;
     }
 
-    setStatusMessage(text.readyStatus(images.length, brief.platform));
+    setStatusMessage(
+      `Brief ready — ${images.length} photo${images.length === 1 ? "" : "s"} for ${marketplaces.join(", ")}.`
+    );
   }
 
   return (
-    <main className="studioPage" lang={language === "hi" ? "hi" : "en"}>
+    <main className="studioPage">
       <header className="studioTopBar">
         <Link className="studioBrand" href="/">
-          <span className="brandMark" aria-hidden="true">AI</span>
+          <span className="brandMark" aria-hidden="true">
+            AI
+          </span>
           <span>
-            <strong>{text.brand}</strong>
-            <small>{text.brandSub}</small>
+            <strong>AI Product Image Studio</strong>
+            <small>Marketplace visuals from product photos</small>
           </span>
         </Link>
 
         <nav className="studioNav" aria-label="Studio navigation">
-          <Link href="/">
-            {text.navHome}
-          </Link>
-          <a href="#photos">{text.navPhotos}</a>
-          <a href="#brief">{text.navBrief}</a>
+          <Link href="/">Home</Link>
+          <a href="#photos">Photos</a>
+          <a href="#details">Details</a>
+          <a href="#brief">Brief</a>
         </nav>
 
         <div className="studioTopActions">
-          <div className="studioLanguage" aria-label="Switch language">
-            <button
-              className={language === "en" ? "isActive" : ""}
-              type="button"
-              onClick={() => setLanguage("en")}
-            >
-              EN
-            </button>
-            <button
-              className={language === "hi" ? "isActive" : ""}
-              type="button"
-              onClick={() => setLanguage("hi")}
-            >
-              हिंदी
-            </button>
-          </div>
-          <span className="topPhotoCount">{text.photosSelected(images.length, maxPhotos)}</span>
+          <span className="topPhotoCount">
+            {images.length}/{MAX_PHOTOS} photos
+          </span>
         </div>
       </header>
 
       <form className="studioWorkspace" onSubmit={handleSubmit}>
         <section className="uploadColumn" id="photos" aria-labelledby="upload-title">
-          <div className="workspaceHeader">
-            <div>
-              <p className="eyebrow">{text.uploadEyebrow}</p>
-              <h1 id="upload-title">{text.uploadTitle}</h1>
-              <p>{text.uploadDesc}</p>
-            </div>
-            <span className="photoCounter">{images.length}/{maxPhotos}</span>
+          <div className="formSectionHead">
+            <p className="eyebrow">Upload</p>
+            <h1 id="upload-title">Product photos</h1>
+            <p className="sectionDesc">
+              Front, side, back, and detail shots. <span className="requiredMark">*</span> at least 1 required, 2–4 recommended.
+            </p>
           </div>
 
           <div
@@ -469,14 +580,14 @@ export default function StudioPage() {
             <span className="uploadIcon" aria-hidden="true">
               +
             </span>
-            <strong>{text.dropTitle}</strong>
-            <small>{text.dropHint(maxPhotos)}</small>
+            <strong>Drop product photos</strong>
+            <small>PNG, JPG, or WEBP. Up to {MAX_PHOTOS} images.</small>
             <button
               className="secondaryButton compactButton"
               type="button"
               onClick={() => fileInputRef.current?.click()}
             >
-              {text.choosePhotos}
+              Choose photos
             </button>
           </div>
 
@@ -485,13 +596,7 @@ export default function StudioPage() {
               {images.map((image) => (
                 <article className="previewTile" key={image.id}>
                   <div className="previewImage">
-                    <Image
-                      src={image.url}
-                      alt={`Preview of ${image.name}`}
-                      fill
-                      sizes="160px"
-                      unoptimized
-                    />
+                    <Image src={image.url} alt={`Preview of ${image.name}`} fill sizes="160px" unoptimized />
                   </div>
                   <div className="previewMeta">
                     <strong>{image.name}</strong>
@@ -503,182 +608,384 @@ export default function StudioPage() {
                     onClick={() => removeImage(image.id)}
                     aria-label={`Remove ${image.name}`}
                   >
-                    X
+                    &times;
                   </button>
                 </article>
               ))}
             </div>
           ) : (
             <div className="emptyPreview" aria-hidden="true">
-              {text.emptySlots.map((slot) => (
+              {["Front", "Side", "Detail", "Scale"].map((slot) => (
                 <span key={slot}>{slot}</span>
               ))}
             </div>
           )}
+
+          <div className="uploadDivider" />
+
+          <div className="formSectionHead">
+            <p className="eyebrow">Branding</p>
+            <h2>Logo</h2>
+            <p className="sectionDesc">Optional. Used to place your mark on packaging or banner shots.</p>
+          </div>
+
+          {logo ? (
+            <div className="logoPreview">
+              <div className="previewImage logoPreviewImage">
+                <Image src={logo.url} alt={`Preview of ${logo.name}`} fill sizes="72px" unoptimized />
+              </div>
+              <div className="previewMeta">
+                <strong>{logo.name}</strong>
+                <span>{logo.size}</span>
+              </div>
+              <button className="ghostButton compactButton" type="button" onClick={removeLogo}>
+                Remove
+              </button>
+            </div>
+          ) : (
+            <div className="dropZone compactDrop">
+              <input
+                ref={logoInputRef}
+                className="fileInput"
+                type="file"
+                accept="image/*"
+                onChange={handleLogoChange}
+              />
+              <small>No logo uploaded</small>
+              <button
+                className="secondaryButton compactButton"
+                type="button"
+                onClick={() => logoInputRef.current?.click()}
+              >
+                Upload logo
+              </button>
+            </div>
+          )}
         </section>
 
-        <section className="formColumn" id="brief" aria-labelledby="details-title">
+        <section className="formColumn" id="details" aria-labelledby="details-title">
           <div className="workspaceHeader formHeader">
             <div>
-              <p className="eyebrow">{text.briefEyebrow}</p>
-              <h2 id="details-title">{text.formTitle}</h2>
-              <p>{text.formDesc}</p>
+              <p className="eyebrow">Listing brief</p>
+              <h2 id="details-title">Build the image brief</h2>
+              <p>Add product, marketplace, style, and output details for the final image set.</p>
             </div>
             <button className="ghostButton" type="button" onClick={resetBrief}>
-              {text.reset}
+              Reset
             </button>
           </div>
 
-          <fieldset className="platformFieldset">
-            <legend>{text.platformLegend}</legend>
-            <div className="platformGrid">
-              {platforms.map((platform) => (
-                <label className="platformOption" key={platform.name}>
-                  <input
-                    type="radio"
-                    name="platform"
-                    value={platform.name}
-                    checked={brief.platform === platform.name}
-                    onChange={(event) => updateBrief("platform", event.target.value)}
-                  />
-                  <span>
-                    <strong>{platform.name}</strong>
-                  </span>
-                </label>
-              ))}
+          <FormSection eyebrow="Required" title="Product basics">
+            <div className="formGrid">
+              <label>
+                <span>
+                  Product name <span className="requiredMark">*</span>
+                </span>
+                <input
+                  type="text"
+                  value={brief.productName}
+                  onChange={(event) => updateBrief("productName", event.target.value)}
+                  placeholder="Wireless desk lamp"
+                />
+              </label>
+
+              <label>
+                <span>
+                  Category <span className="requiredMark">*</span>
+                </span>
+                <input
+                  type="text"
+                  list="category-suggestions"
+                  value={brief.category}
+                  onChange={(event) => updateBrief("category", event.target.value)}
+                  placeholder="Electronics, Clothing, Furniture..."
+                />
+                <datalist id="category-suggestions">
+                  {CATEGORY_SUGGESTIONS.map((category) => (
+                    <option value={category} key={category} />
+                  ))}
+                </datalist>
+              </label>
+
+              <label>
+                <span>Brand name</span>
+                <input
+                  type="text"
+                  value={brief.brandName}
+                  onChange={(event) => updateBrief("brandName", event.target.value)}
+                  placeholder="Optional if unbranded"
+                />
+              </label>
+
+              <label>
+                <span>SKU</span>
+                <input
+                  type="text"
+                  value={brief.sku}
+                  onChange={(event) => updateBrief("sku", event.target.value)}
+                  placeholder="Optional"
+                />
+              </label>
             </div>
-          </fieldset>
+          </FormSection>
 
-          <div className="selectedPlatformNote">
-            <strong>{selectedPlatform.name} {text.focus}</strong>
-            <span>{language === "hi" ? selectedPlatform.noteHi : selectedPlatform.note}</span>
-          </div>
-
-          <div className="formGrid">
-            <label>
-              <span>{text.fields.productName}</span>
-              <input
-                type="text"
-                value={brief.productName}
-                onChange={(event) => updateBrief("productName", event.target.value)}
-                placeholder={text.placeholders.productName}
-              />
-            </label>
-
-            <label>
-              <span>{text.fields.category}</span>
-              <input
-                type="text"
-                value={brief.category}
-                onChange={(event) => updateBrief("category", event.target.value)}
-                placeholder={text.placeholders.category}
-              />
-            </label>
-
-            <label>
-              <span>{text.fields.audience}</span>
-              <input
-                type="text"
-                value={brief.audience}
-                onChange={(event) => updateBrief("audience", event.target.value)}
-                placeholder={text.placeholders.audience}
-              />
-            </label>
-
-            <label>
-              <span>{text.fields.priceRange}</span>
-              <input
-                type="text"
-                value={brief.priceRange}
-                onChange={(event) => updateBrief("priceRange", event.target.value)}
-                placeholder={text.placeholders.priceRange}
-              />
-            </label>
-
-            <label>
-              <span>{text.fields.sku}</span>
-              <input
-                type="text"
-                value={brief.sku}
-                onChange={(event) => updateBrief("sku", event.target.value)}
-                placeholder={text.placeholders.sku}
-              />
-            </label>
-
-            <label>
-              <span>{text.fields.imageCount}</span>
-              <input
-                type="number"
-                min="1"
-                max="12"
-                value={brief.imageCount}
-                onChange={(event) => updateBrief("imageCount", event.target.value)}
-              />
-            </label>
-          </div>
-
-          <div className="controlGroup">
-            <span className="controlLabel">{text.fields.background}</span>
-            <div className="segmentedControl">
-              {backgrounds.map((background) => (
-                <button
-                  className={brief.background === background ? "isSelected" : ""}
-                  key={background}
-                  type="button"
-                  onClick={() => updateBrief("background", background)}
-                >
-                  {backgroundLabels[language][background] ?? background}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="controlGroup">
-            <span className="controlLabel">{text.fields.format}</span>
-            <div className="segmentedControl">
-              {aspectRatios.map((ratio) => (
-                <button
-                  className={brief.aspectRatio === ratio ? "isSelected" : ""}
-                  key={ratio}
-                  type="button"
-                  onClick={() => updateBrief("aspectRatio", ratio)}
-                >
-                  {aspectRatioLabels[language][ratio] ?? ratio}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <fieldset className="goalFieldset">
-            <legend>{text.fields.goals}</legend>
-            <div className="goalGrid">
-              {imageGoals.map((goal) => (
-                <label className="goalOption" key={goal}>
-                  <input
-                    type="checkbox"
-                    checked={selectedGoals.includes(goal)}
-                    onChange={() => toggleGoal(goal)}
-                  />
-                  <span>{goalLabels[language][goal] ?? goal}</span>
-                </label>
-              ))}
-            </div>
-          </fieldset>
-
-          <label className="promptField">
-            <span>{text.fields.prompt}</span>
-            <textarea
-              value={brief.customPrompt}
-              onChange={(event) => updateBrief("customPrompt", event.target.value)}
-              placeholder={text.placeholders.prompt}
-              rows={5}
+          <FormSection eyebrow="Required" title="Marketplace & background">
+            <CheckGrid
+              legend={
+                <>
+                  Marketplace(s) <span className="requiredMark">*</span>
+                </>
+              }
+              options={MARKETPLACES}
+              values={marketplaces}
+              onToggle={(value) => setMarketplaces((current) => toggleValue(current, value))}
+              columns={4}
             />
-          </label>
 
-          <aside className="briefPanel" aria-label="Current generation brief">
+            {marketplaces.includes("Custom") ? (
+              <label className="inlineField">
+                <span>Custom marketplace</span>
+                <input
+                  type="text"
+                  value={brief.customMarketplace}
+                  onChange={(event) => updateBrief("customMarketplace", event.target.value)}
+                  placeholder="Name your marketplace"
+                />
+              </label>
+            ) : null}
+
+            <PillGroup
+              legend="Background preference"
+              options={BACKGROUND_OPTIONS}
+              value={brief.background}
+              onChange={(value) => updateBrief("background", value)}
+            />
+
+            {brief.background === "Custom Color" ? (
+              <label className="inlineField colorField">
+                <span>Custom background color</span>
+                <div className="colorFieldRow">
+                  <input
+                    className="colorPicker"
+                    type="color"
+                    value={brief.customBackgroundColor}
+                    onChange={(event) => updateBrief("customBackgroundColor", event.target.value)}
+                  />
+                  <input
+                    type="text"
+                    value={brief.customBackgroundColor}
+                    onChange={(event) => updateBrief("customBackgroundColor", event.target.value)}
+                  />
+                </div>
+              </label>
+            ) : null}
+          </FormSection>
+
+          <FormSection eyebrow="Product details" title="Features, color & specs">
+            <ChipInput
+              legend="Key features"
+              hint={`Add ${MIN_FEATURES}–${MAX_FEATURES} points, e.g. Waterproof, Fast Charging, Lightweight.`}
+              values={keyFeatures}
+              onAdd={(value) => setKeyFeatures((current) => [...current, value])}
+              onRemove={(value) => setKeyFeatures((current) => current.filter((item) => item !== value))}
+              placeholder="Type a feature and press Enter"
+              max={MAX_FEATURES}
+            />
+
+            <ChipInput
+              legend="Product color(s)"
+              values={productColors}
+              onAdd={(value) => setProductColors((current) => [...current, value])}
+              onRemove={(value) => setProductColors((current) => current.filter((item) => item !== value))}
+              placeholder="Type a color and press Enter"
+              max={MAX_PRODUCT_COLORS}
+              withColorPicker
+            />
+
+            <div className="formGrid">
+              <label>
+                <span>Material</span>
+                <input
+                  type="text"
+                  value={brief.material}
+                  onChange={(event) => updateBrief("material", event.target.value)}
+                  placeholder="Optional"
+                />
+              </label>
+
+              <label>
+                <span>Dimensions</span>
+                <input
+                  type="text"
+                  value={brief.dimensions}
+                  onChange={(event) => updateBrief("dimensions", event.target.value)}
+                  placeholder="Optional"
+                />
+              </label>
+
+              <label>
+                <span>Weight</span>
+                <input
+                  type="text"
+                  value={brief.weight}
+                  onChange={(event) => updateBrief("weight", event.target.value)}
+                  placeholder="Optional"
+                />
+              </label>
+            </div>
+          </FormSection>
+
+          <FormSection eyebrow="Branding" title="Brand look & feel">
+            <ChipInput
+              legend="Brand colors"
+              values={brandColors}
+              onAdd={(value) => setBrandColors((current) => [...current, value])}
+              onRemove={(value) => setBrandColors((current) => current.filter((item) => item !== value))}
+              placeholder="Pick or type a hex color"
+              max={MAX_BRAND_COLORS}
+              withColorPicker
+            />
+
+            <PillGroup
+              legend="Preferred font style"
+              options={FONT_STYLES}
+              value={brief.fontStyle}
+              onChange={(value) => updateBrief("fontStyle", value)}
+            />
+          </FormSection>
+
+          <FormSection eyebrow="Image style" title="Choose image types">
+            <CheckGrid legend="Image types" options={IMAGE_TYPES} values={imageTypes} onToggle={(value) => setImageTypes((current) => toggleValue(current, value))} columns={2} />
+          </FormSection>
+
+          <FormSection eyebrow="AI preferences" title="Style, text & language">
+            <PillGroup legend="Image style" options={AI_IMAGE_STYLES} value={brief.aiStyle} onChange={(value) => updateBrief("aiStyle", value)} />
+            <PillGroup legend="Text on image" options={TEXT_ON_IMAGE_OPTIONS} value={brief.textOnImage} onChange={(value) => updateBrief("textOnImage", value)} />
+            <PillGroup legend="Language" options={LANGUAGE_OPTIONS} value={brief.language} onChange={(value) => updateBrief("language", value)} />
+          </FormSection>
+
+          <FormSection eyebrow="Output" title="Format & resolution">
+            <PillGroup legend="Image format" options={IMAGE_FORMATS} value={brief.imageFormat} onChange={(value) => updateBrief("imageFormat", value)} />
+            <PillGroup legend="Resolution" options={RESOLUTIONS} value={brief.resolution} onChange={(value) => updateBrief("resolution", value)} />
+          </FormSection>
+
+          <details className="formSection optionalSection">
+            <summary>
+              <span>Optional listing details</span>
+              <span className="summaryChevron" aria-hidden="true" />
+            </summary>
+
+            <div className="optionalContent">
+              <label className="promptField">
+                <span>Product description</span>
+                <textarea
+                  value={brief.description}
+                  onChange={(event) => updateBrief("description", event.target.value)}
+                  placeholder="A short description buyers will see on the listing."
+                  rows={3}
+                />
+              </label>
+
+              <div className="formGrid">
+                <label>
+                  <span>Target audience</span>
+                  <input
+                    type="text"
+                    value={brief.targetAudience}
+                    onChange={(event) => updateBrief("targetAudience", event.target.value)}
+                    placeholder="Students, creators, home workers"
+                  />
+                </label>
+
+                <label>
+                  <span>Selling price</span>
+                  <input
+                    type="text"
+                    value={brief.sellingPrice}
+                    onChange={(event) => updateBrief("sellingPrice", event.target.value)}
+                    placeholder="₹999"
+                  />
+                </label>
+
+                <label>
+                  <span>MRP</span>
+                  <input
+                    type="text"
+                    value={brief.mrp}
+                    onChange={(event) => updateBrief("mrp", event.target.value)}
+                    placeholder="₹1,499"
+                  />
+                </label>
+
+                <label>
+                  <span>Discount %</span>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={brief.discountPercent}
+                    onChange={(event) => updateBrief("discountPercent", event.target.value)}
+                    placeholder="33"
+                  />
+                </label>
+
+                <label>
+                  <span>Special offers</span>
+                  <input
+                    type="text"
+                    value={brief.specialOffers}
+                    onChange={(event) => updateBrief("specialOffers", event.target.value)}
+                    placeholder="Buy 1 Get 1, Bank offer..."
+                  />
+                </label>
+
+                <label>
+                  <span>Warranty</span>
+                  <input
+                    type="text"
+                    value={brief.warranty}
+                    onChange={(event) => updateBrief("warranty", event.target.value)}
+                    placeholder="1 year manufacturer warranty"
+                  />
+                </label>
+
+                <label>
+                  <span>Country of origin</span>
+                  <input
+                    type="text"
+                    value={brief.countryOfOrigin}
+                    onChange={(event) => updateBrief("countryOfOrigin", event.target.value)}
+                    placeholder="India"
+                  />
+                </label>
+              </div>
+
+              <label className="promptField">
+                <span>Package contents</span>
+                <textarea
+                  value={brief.packageContents}
+                  onChange={(event) => updateBrief("packageContents", event.target.value)}
+                  placeholder="1 x Product, 1 x USB-C cable, 1 x User manual"
+                  rows={2}
+                />
+              </label>
+
+              <label className="promptField">
+                <span>Custom prompt</span>
+                <textarea
+                  value={brief.customPrompt}
+                  onChange={(event) => updateBrief("customPrompt", event.target.value)}
+                  placeholder="Keep the original color, add soft shadows, show premium packaging..."
+                  rows={4}
+                />
+              </label>
+            </div>
+          </details>
+
+          <aside className="briefPanel" id="brief" aria-label="Current generation brief">
             <div className="briefHeader">
-              <h2>{text.readyBrief}</h2>
-              <span>{brief.platform}</span>
+              <h2>Ready brief</h2>
+              <span>{marketplaces.length > 0 ? marketplaces.join(", ") : "No marketplace"}</span>
             </div>
 
             <div className="briefList">
@@ -687,24 +994,22 @@ export default function StudioPage() {
               ))}
             </div>
 
-            <div className="goalSummary">
-              <strong>{text.selectedGoals}</strong>
-              <p>
-                {selectedGoals.length > 0
-                  ? selectedGoals.map((goal) => goalLabels[language][goal] ?? goal).join(", ")
-                  : text.noGoals}
-              </p>
-            </div>
+            {keyFeatures.length > 0 ? (
+              <div className="summaryNote">
+                <strong>Key features</strong>
+                <p>{keyFeatures.join(", ")}</p>
+              </div>
+            ) : null}
 
             {brief.customPrompt ? (
-              <div className="promptSummary">
-                <strong>{text.customization}</strong>
+              <div className="summaryNote">
+                <strong>Customization</strong>
                 <p>{brief.customPrompt}</p>
               </div>
             ) : null}
 
             <button className="primaryButton fullButton" type="submit">
-              <span>{text.createBrief}</span>
+              <span>Create image brief</span>
               <span className="buttonIcon" aria-hidden="true">
                 +
               </span>

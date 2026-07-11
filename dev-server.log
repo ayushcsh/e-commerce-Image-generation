@@ -4,10 +4,637 @@
 
 ▲ Next.js 16.2.10 (Turbopack)
 - Local:         http://localhost:3000
-- Network:       http://192.168.1.36:3000
-✓ Ready in 1098ms
-Creating turbopack project {
-  dir: 'C:\\Users\\DJ Rocks\\Desktop\\Image gen\\main',
-  testMode: true
-}
+- Network:       http://192.168.100.163:3000
+- Environments: .env.local
+✓ Ready in 1799ms
 
+ GET / 200 in 2.9s (next.js: 891ms, application-code: 2.0s)
+ GET / 200 in 618ms (next.js: 75ms, application-code: 543ms)
+ GET / 200 in 219ms (next.js: 6ms, application-code: 213ms)
+✓ Compiled in 181ms
+✓ Compiled in 29ms
+✓ Compiled in 43ms
+✓ Compiled in 50ms
+✓ Compiled in 42ms
+✓ Compiled in 130ms
+ GET / 200 in 1434ms (next.js: 143ms, application-code: 1291ms)
+✓ Compiled in 253ms
+ GET / 200 in 503ms (next.js: 122ms, application-code: 381ms)
+ GET / 200 in 234ms (next.js: 20ms, application-code: 214ms)
+ GET / 200 in 233ms (next.js: 58ms, application-code: 175ms)
+ GET / 200 in 90ms (next.js: 20ms, application-code: 71ms)
+✓ Compiled in 133ms
+ GET / 200 in 351ms (next.js: 72ms, application-code: 278ms)
+ GET / 200 in 350ms (next.js: 188ms, application-code: 162ms)
+ GET / 200 in 119ms (next.js: 15ms, application-code: 104ms)
+ GET / 200 in 108ms (next.js: 30ms, application-code: 78ms)
+✓ Compiled in 163ms
+✓ Compiled in 28ms
+✓ Compiled in 38ms
+✓ Compiled in 1184ms
+✓ Compiled in 256ms
+ GET /login?callbackUrl=%2Fstudio 200 in 2.8s (next.js: 634ms, application-code: 2.2s)
+ POST /login?callbackUrl=%2Fstudio 303 in 2.7s (next.js: 12ms, application-code: 2.7s)
+  └─ ƒ <inline action>({"reason":{"count":148,"fork":false},"status":"fulfilled","value":"LcAx5oxBm5CyH/6rxOUK9ZskYnrgor+ymUlNpECOEKkd02CD16y1u5o+6DJ6qwYHLWlRQllCVdvTYrvmR/MFqg274mMEzpOHM6p1hFibseIjLZQdsgIjOuQixZDwCH2EIeTn2IKvYizyShz0uA=="}) in 2398ms app/login/page.tsx
+✓ Compiled in 165ms
+○ Compiling /api/auth/[...nextauth] ...
+ GET /api/auth/callback/google?iss=https%3A%2F%2Faccounts.google.com&code=4%2F0AdkVLPyzkYLHwvKMketgJ1ePoxCZrVJ3VJNv-hhXkQ2B-q4X9QOBpuWAyZPxn7KyzPBk3Q&scope=email+profile+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.profile+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email+openid&authuser=0&prompt=consent 302 in 8.9s (next.js: 7.9s, application-code: 976ms)
+ GET /studio 200 in 323ms (next.js: 39ms, proxy.ts: 110ms, application-code: 173ms)
+ GET / 200 in 768ms (next.js: 119ms, application-code: 649ms)
+ GET /login 200 in 108ms (next.js: 27ms, application-code: 81ms)
+[browser] A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+https://react.dev/link/hydration-mismatch
+
+  ...
+    <ErrorBoundary errorComponent={undefined} errorStyles={undefined} errorScripts={undefined}>
+      <LoadingBoundary name="studio/" loading={null}>
+        <HTTPAccessFallbackBoundary notFound={undefined} forbidden={undefined} unauthorized={undefined}>
+          <RedirectBoundary>
+            <RedirectErrorBoundary router={{...}}>
+              <InnerLayoutRouter url="/studio" tree={[...]} params={{}} cacheNode={{rsc:{...}, ...}} segmentPath={[...]} ...>
+                <SegmentViewNode type="page" pagePath="studio/pag...">
+                  <SegmentTrieNode>
+                  <ClientPageRoot Component={function StudioPage} serverProvidedParams={{...}}>
+                    <StudioPage params={Promise} searchParams={Promise}>
+                      <main className="studioPage">
+                        <header>
+                        <form className="studioWork..." onSubmit={function handleSubmit}>
+                          <section className="uploadColumn" id="photos" aria-labelledby="upload-title">
+                            <div>
+                            <div className="dropZone" onDragEnter={function onDragEnter} ...>
+                              <input>
+                              <span>
+                              <strong>
+                              <small>
+                              <button
+                                className="secondaryButton compactButton"
+                                type="button"
+                                onClick={function onClick}
+-                               fdprocessedid="jcvfyd"
+                              >
++                               Choose photos
+                            <div>
+                            <div>
+                            <div>
+                            <div className="dropZone c...">
+                              <input>
+                              <small>
+                              <button
+                                className="secondaryButton compactButton"
+                                type="button"
+                                onClick={function onClick}
+-                               fdprocessedid="hv3rrb"
+                              >
++                               Upload logo
+                          <section className="formColumn" id="details" aria-labelledby="details-title">
+                            <div className="workspaceH...">
+                              <div>
+                              <button
+                                className="ghostButton"
+                                type="button"
+                                onClick={function resetBrief}
+-                               fdprocessedid="lonif"
+                              >
++                               Reset
+                            <FormSection eyebrow="Required" title="Product ba...">
+                              <section className="formSection" id={undefined}>
+                                <div>
+                                <div className="formGrid">
+                                  <label>
+                                    <span>
+                                    <input
+                                      type="text"
+                                      value=""
+                                      onChange={function onChange}
+                                      placeholder="Wireless desk lamp"
+-                                     fdprocessedid="thpf3s"
+                                    >
+                                  <label>
+                                    <span>
+                                    <input
+                                      type="text"
+                                      list="category-suggestions"
+                                      value=""
+                                      onChange={function onChange}
+                                      placeholder="Electronics, Clothing, Furniture..."
+-                                     fdprocessedid="izybh"
+                                    >
+                                    ...
+                                  <label>
+                                    <span>
+                                    <input
+                                      type="text"
+                                      value=""
+                                      onChange={function onChange}
+                                      placeholder="Optional if unbranded"
+-                                     fdprocessedid="9p6bq"
+                                    >
+                                  <label>
+                                    <span>
+                                    <input
+                                      type="text"
+                                      value=""
+                                      onChange={function onChange}
+                                      placeholder="Optional"
+-                                     fdprocessedid="obr30g"
+                                    >
+                            ...
+                              <PillGroup legend="Background..." options={[...]} value="Pure White" ...>
+                                <div className="controlGroup">
+                                  <span>
+                                  <div className="pillGroup">
+                                    <button
+                                      className="isSelected"
+                                      type="button"
+                                      onClick={function onClick}
+-                                     fdprocessedid="3o2uto"
+                                    >
++                                     Pure White
+                                    <button
+                                      className=""
+                                      type="button"
+                                      onClick={function onClick}
+-                                     fdprocessedid="e2hv68"
+                                    >
++                                     Transparent
+                                    <button
+                                      className=""
+                                      type="button"
+                                      onClick={function onClick}
+-                                     fdprocessedid="30i45vu"
+                                    >
++                                     Lifestyle
+                                    <button
+                                      className=""
+                                      type="button"
+                                      onClick={function onClick}
+-                                     fdprocessedid="93644p"
+                                    >
++                                     Gradient
+                                    <button
+                                      className=""
+                                      type="button"
+                                      onClick={function onClick}
+-                                     fdprocessedid="n8v7bj"
+                                    >
++                                     Custom Color
+                            ...
+                              <ChipInput legend="Key features" hint="Add 3–6 po..." values={[...]} onAdd={function onAdd} ...>
+                                <div className="chipField">
+                                  <div>
+                                  <p>
+                                  <div className="chipInputRow">
+                                    <input
+                                      type="text"
+                                      value=""
+                                      onChange={function onChange}
+                                      onKeyDown={function onKeyDown}
+                                      placeholder="Type a feature and press Enter"
+                                      disabled={false}
+-                                     fdprocessedid="30azql"
+                                    >
+                                    <button
+                                      className="chipAddButton"
+                                      type="button"
+                                      onClick={function commit}
+                                      disabled={false}
+-                                     fdprocessedid="i1n9x1"
+                                    >
++                                     Add
+                              <ChipInput legend="Product co..." values={[...]} onAdd={function onAdd} ...>
+                                <div className="chipField">
+                                  <div>
+                                  <div className="chipInputRow">
+                                    <input
+                                      type="text"
+                                      value=""
+                                      onChange={function onChange}
+                                      onKeyDown={function onKeyDown}
+                                      placeholder="Type a color and press Enter"
+                                      disabled={false}
+-                                     fdprocessedid="luchg8"
+                                    >
+                                    <input>
+                                    <button
+                                      className="chipAddButton"
+                                      type="button"
+                                      onClick={function commit}
+                                      disabled={false}
+-                                     fdprocessedid="dld2s"
+                                    >
++                                     Add
+                              <div className="formGrid">
+                                <label>
+                                  <span>
+                                  <input
+                                    type="text"
+                                    value=""
+                                    onChange={function onChange}
+                                    placeholder="Optional"
+-                                   fdprocessedid="bmrxgi"
+                                  >
+                                <label>
+                                  <span>
+                                  <input
+                                    type="text"
+                                    value=""
+                                    onChange={function onChange}
+                                    placeholder="Optional"
+-                                   fdprocessedid="1whkk"
+                                  >
+                                <label>
+                                  <span>
+                                  <input
+                                    type="text"
+                                    value=""
+                                    onChange={function onChange}
+                                    placeholder="Optional"
+-                                   fdprocessedid="xdxpao"
+                                  >
+                            ...
+                              <ChipInput legend="Brand colors" values={[...]} onAdd={function onAdd} ...>
+                                <div className="chipField">
+                                  <div>
+                                  <div className="chipInputRow">
+                                    <input
+                                      type="text"
+                                      value=""
+                                      onChange={function onChange}
+                                      onKeyDown={function onKeyDown}
+                                      placeholder="Pick or type a hex color"
+                                      disabled={false}
+-                                     fdprocessedid="bgphvh"
+                                    >
+                                    <input>
+                                    <button
+                                      className="chipAddButton"
+                                      type="button"
+                                      onClick={function commit}
+                                      disabled={false}
+-                                     fdprocessedid="rh0b2"
+                                    >
++                                     Add
+                              <PillGroup legend="Preferred ..." options={[...]} value="Modern" ...>
+                                <div className="controlGroup">
+                                  <span>
+                                  <div className="pillGroup">
+                                    <button
+                                      className="isSelected"
+                                      type="button"
+                                      onClick={function onClick}
+-                                     fdprocessedid="e9k53g"
+                                    >
++                                     Modern
+                                    <button
+                                      className=""
+                                      type="button"
+                                      onClick={function onClick}
+-                                     fdprocessedid="a8kxwu"
+                                    >
++                                     Classic
+                                    <button
+                                      className=""
+                                      type="button"
+                                      onClick={function onClick}
+-                                     fdprocessedid="7l8ut9"
+                                    >
++                                     Bold
+                                    <button
+                                      className=""
+                                      type="button"
+                                      onClick={function onClick}
+-                                     fdprocessedid="5wpwx6"
+                                    >
++                                     Elegant
+                                    <button
+                                      className=""
+                                      type="button"
+                                      onClick={function onClick}
+-                                     fdprocessedid="0wl8b"
+                                    >
++                                     Minimal
+                                    <button
+                                      className=""
+                                      type="button"
+                                      onClick={function onClick}
+-                                     fdprocessedid="pn173"
+                                    >
++                                     Playful
+                            <FormSection>
+                            ...
+                              <PillGroup legend="Image style" options={[...]} value="Minimal" ...>
+                                <div className="controlGroup">
+                                  <span>
+                                  <div className="pillGroup">
+                                    <button
+                                      className="isSelected"
+                                      type="button"
+                                      onClick={function onClick}
+-                                     fdprocessedid="wourpn"
+                                    >
++                                     Minimal
+                                    <button
+                                      className=""
+                                      type="button"
+                                      onClick={function onClick}
+-                                     fdprocessedid="i3l8zg"
+                                    >
++                                     Premium
+                                    <button
+                                      className=""
+                                      type="button"
+                                      onClick={function onClick}
+-                                     fdprocessedid="rxn2mt"
+                                    >
++                                     Luxury
+                                    <button
+                                      className=""
+                                      type="button"
+                                      onClick={function onClick}
+-                                     fdprocessedid="5j7huo"
+                                    >
++                                     Modern
+                                    <button
+                                      className=""
+                                      type="button"
+                                      onClick={function onClick}
+-                                     fdprocessedid="oqju2c"
+                                    >
++                                     Colorful
+                                    <button
+                                      className=""
+                                      type="button"
+                                      onClick={function onClick}
+-                                     fdprocessedid="ye2bw"
+                                    >
++                                     Professional
+                              <PillGroup legend="Text on image" options={[...]} value="No Text" ...>
+                                <div className="controlGroup">
+                                  <span>
+                                  <div className="pillGroup">
+                                    <button
+                                      className="isSelected"
+                                      type="button"
+                                      onClick={function onClick}
+-                                     fdprocessedid="498pyr"
+                                    >
++                                     No Text
+                                    <button
+                                      className=""
+                                      type="button"
+                                      onClick={function onClick}
+-                                     fdprocessedid="vgqib4"
+                                    >
++                                     Minimal Text
+                                    <button
+                                      className=""
+                                      type="button"
+                                      onClick={function onClick}
+-                                     fdprocessedid="4jl61"
+                                    >
++                                     Feature Highlights
+                                    <button
+                                      className=""
+                                      type="button"
+                                      onClick={function onClick}
+-                                     fdprocessedid="bp0w7"
+                                    >
++                                     Promotional
+                              <PillGroup legend="Language" options={[...]} value="English" onChange={function onChange}>
+                                <div className="controlGroup">
+                                  <span>
+                                  <div className="pillGroup">
+                                    <button
+                                      className="isSelected"
+                                      type="button"
+                                      onClick={function onClick}
+-                                     fdprocessedid="ofc8m9"
+                                    >
++                                     English
+                                    <button
+                                      className=""
+                                      type="button"
+                                      onClick={function onClick}
+-                                     fdprocessedid="jkqexe"
+                                    >
++                                     Hindi
+                                    <button
+                                      className=""
+                                      type="button"
+                                      onClick={function onClick}
+-                                     fdprocessedid="516zre"
+                                    >
++                                     Both
+                            ...
+                              <PillGroup legend="Image format" options={[...]} value="PNG" onChange={function onChange}>
+                                <div className="controlGroup">
+                                  <span>
+                                  <div className="pillGroup">
+                                    <button
+                                      className="isSelected"
+                                      type="button"
+                                      onClick={function onClick}
+-                                     fdprocessedid="2sx4d8"
+                                    >
++                                     PNG
+                                    <button
+                                      className=""
+                                      type="button"
+                                      onClick={function onClick}
+-                                     fdprocessedid="kb1kiq"
+                                    >
++                                     JPG
+                                    <button
+                                      className=""
+                                      type="button"
+                                      onClick={function onClick}
+-                                     fdprocessedid="mkww8u"
+                                    >
++                                     WebP
+                              <PillGroup legend="Resolution" options={[...]} value="HD" onChange={function onChange}>
+                                <div className="controlGroup">
+                                  <span>
+                                  <div className="pillGroup">
+                                    <button
+                                      className=""
+                                      type="button"
+                                      onClick={function onClick}
+-                                     fdprocessedid="6psrs7"
+                                    >
++                                     Standard
+                                    <button
+                                      className="isSelected"
+                                      type="button"
+                                      onClick={function onClick}
+-                                     fdprocessedid="ej2tgd"
+                                    >
++                                     HD
+                                    <button
+                                      className=""
+                                      type="button"
+                                      onClick={function onClick}
+-                                     fdprocessedid="oq3cp"
+                                    >
++                                     4K
+                            <details className="formSectio...">
+                              <summary>
+                              <div className="optionalCo...">
+                                <label>
+                                <div className="formGrid">
+                                  <label>
+                                    <span>
+                                    <input
+                                      type="text"
+                                      value=""
+                                      onChange={function onChange}
+                                      placeholder="Students, creators, home workers"
+-                                     fdprocessedid="n5375p"
+                                    >
+                                  <label>
+                                    <span>
+                                    <input
+                                      type="text"
+                                      value=""
+                                      onChange={function onChange}
+                                      placeholder="₹999"
+-                                     fdprocessedid="s45rzr"
+                                    >
+                                  <label>
+                                    <span>
+                                    <input
+                                      type="text"
+                                      value=""
+                                      onChange={function onChange}
+                                      placeholder="₹1,499"
+-                                     fdprocessedid="5llmu"
+                                    >
+                                  <label>
+                                    <span>
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      max="100"
+                                      value=""
+                                      onChange={function onChange}
+                                      placeholder="33"
+-                                     fdprocessedid="z6s3hk"
+                                    >
+                                  <label>
+                                    <span>
+                                    <input
+                                      type="text"
+                                      value=""
+                                      onChange={function onChange}
+                                      placeholder="Buy 1 Get 1, Bank offer..."
+-                                     fdprocessedid="vzepzp"
+                                    >
+                                  <label>
+                                    <span>
+                                    <input
+                                      type="text"
+                                      value=""
+                                      onChange={function onChange}
+                                      placeholder="1 year manufacturer warranty"
+-                                     fdprocessedid="3d7bk9"
+                                    >
+                                  <label>
+                                    <span>
+                                    <input
+                                      type="text"
+                                      value=""
+                                      onChange={function onChange}
+                                      placeholder="India"
+-                                     fdprocessedid="g5y0jr"
+                                    >
+                                ...
+                            <aside className="briefPanel" id="brief" aria-label="Current ge...">
+                              <div>
+                              <div>
+                              <button
+                                className="primaryButton fullButton"
+                                type="submit"
+-                               fdprocessedid="fm4gie"
+                              >
+                ...
+              ...
+ 
+    at <unknown> (file://C:/Users/Graph/Desktop/image generation/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_096_9a-._.js:3439:25)
+    at runWithFiberInDEV (file://C:/Users/Graph/Desktop/image generation/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_096_9a-._.js:965:74)
+    at emitPendingHydrationWarnings (file://C:/Users/Graph/Desktop/image generation/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_096_9a-._.js:3438:13)
+    at completeWork (file://C:/Users/Graph/Desktop/image generation/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_096_9a-._.js:6885:102)
+    at runWithFiberInDEV (file://C:/Users/Graph/Desktop/image generation/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_096_9a-._.js:965:131)
+    at completeUnitOfWork (file://C:/Users/Graph/Desktop/image generation/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_096_9a-._.js:9622:23)
+    at performUnitOfWork (file://C:/Users/Graph/Desktop/image generation/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_096_9a-._.js:9557:28)
+    at workLoopConcurrentByScheduler (file://C:/Users/Graph/Desktop/image generation/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_096_9a-._.js:9551:58)
+    at renderRootConcurrent (file://C:/Users/Graph/Desktop/image generation/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_096_9a-._.js:9534:71)
+    at performWorkOnRoot (file://C:/Users/Graph/Desktop/image generation/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_096_9a-._.js:9061:150)
+    at performWorkOnRootViaSchedulerTask (file://C:/Users/Graph/Desktop/image generation/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_096_9a-._.js:10255:9)
+    at MessagePort.performWorkUntilDeadline (file://C:/Users/Graph/Desktop/image generation/.next/dev/static/chunks/node_modules_next_dist_compiled_1amofcm._.js:2647:64) (file://C:/Users/Graph/Desktop/image generation/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_096_9a-._.js:3439:25)
+ GET / 200 in 696ms (next.js: 144ms, application-code: 552ms)
+[browser] Detected `scroll-behavior: smooth` on the `<html>` element. To disable smooth scrolling during route transitions, add `data-scroll-behavior="smooth"` to your <html> element. Learn more: https://nextjs.org/docs/messages/missing-data-scroll-behavior (file://C:/Users/Graph/Desktop/image generation/.next/dev/static/chunks/node_modules_next_dist_1ybzpk2._.js:2477:13)
+ GET /studio 200 in 327ms (next.js: 18ms, proxy.ts: 79ms, application-code: 229ms)
+ GET / 200 in 209ms (next.js: 13ms, application-code: 196ms)
+[browser] Detected `scroll-behavior: smooth` on the `<html>` element. To disable smooth scrolling during route transitions, add `data-scroll-behavior="smooth"` to your <html> element. Learn more: https://nextjs.org/docs/messages/missing-data-scroll-behavior (file://C:/Users/Graph/Desktop/image generation/.next/dev/static/chunks/node_modules_next_dist_1ybzpk2._.js:2477:13)
+ GET /studio 200 in 194ms (next.js: 10ms, proxy.ts: 55ms, application-code: 129ms)
+  Reload env: .env.local
+✓ Compiled in 3.7s
+⚠ Fast Refresh had to perform a full reload when ./node_modules/next/dist/client/image-component.js changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+ GET / 200 in 732ms (next.js: 186ms, application-code: 545ms)
+ GET / 200 in 7.3s (next.js: 4.6s, application-code: 2.7s)
+ GET / 200 in 757ms (next.js: 124ms, application-code: 633ms)
+ GET / 200 in 2.0s (next.js: 170ms, application-code: 1869ms)
+ GET / 200 in 766ms (next.js: 45ms, application-code: 721ms)
+ GET /studio 200 in 8.3s (next.js: 466ms, proxy.ts: 7.5s, application-code: 377ms)
+ GET / 200 in 3.1s (next.js: 47ms, application-code: 3.1s)
+ GET /studio 200 in 736ms (next.js: 26ms, proxy.ts: 235ms, application-code: 474ms)
+ GET /studio 200 in 675ms (next.js: 26ms, proxy.ts: 404ms, application-code: 244ms)
+ GET /studio 200 in 503ms (next.js: 11ms, proxy.ts: 56ms, application-code: 436ms)
+ GET /studio 200 in 430ms (next.js: 13ms, proxy.ts: 89ms, application-code: 328ms)
+✓ Compiled in 934ms
+⚠ Fast Refresh had to perform a full reload when ./node_modules/next/dist/client/image-component.js changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+ GET / 200 in 412ms (next.js: 54ms, application-code: 358ms)
+ GET / 200 in 415ms (next.js: 20ms, application-code: 395ms)
+ GET / 200 in 413ms (next.js: 95ms, application-code: 318ms)
+ GET / 200 in 692ms (next.js: 50ms, application-code: 643ms)
+ GET / 200 in 2.0s (next.js: 555ms, application-code: 1483ms)
+ GET /studio 200 in 2.5s (next.js: 262ms, proxy.ts: 2.0s, application-code: 196ms)
+ GET / 200 in 1225ms (next.js: 19ms, application-code: 1206ms)
+ GET /studio 200 in 221ms (next.js: 14ms, proxy.ts: 96ms, application-code: 112ms)
+ GET /studio 200 in 311ms (next.js: 16ms, proxy.ts: 67ms, application-code: 228ms)
+ GET /studio 200 in 310ms (next.js: 42ms, proxy.ts: 70ms, application-code: 199ms)
+ GET /studio 200 in 310ms (next.js: 85ms, proxy.ts: 68ms, application-code: 156ms)
+ GET /studio 200 in 308ms (next.js: 120ms, proxy.ts: 65ms, application-code: 123ms)
+ GET /studio 200 in 447ms (next.js: 24ms, proxy.ts: 118ms, application-code: 305ms)
+ GET /studio 200 in 444ms (next.js: 69ms, proxy.ts: 118ms, application-code: 257ms)
+ GET /studio 200 in 427ms (next.js: 19ms, proxy.ts: 210ms, application-code: 197ms)
+ GET /studio 200 in 426ms (next.js: 51ms, proxy.ts: 210ms, application-code: 165ms)
+ GET /studio 200 in 424ms (next.js: 86ms, proxy.ts: 209ms, application-code: 130ms)
+ GET /studio 200 in 439ms (next.js: 121ms, proxy.ts: 209ms, application-code: 109ms)
+ GET /studio 200 in 308ms (next.js: 18ms, proxy.ts: 118ms, application-code: 172ms)
+ GET /studio 200 in 308ms (next.js: 63ms, proxy.ts: 117ms, application-code: 128ms)
+ GET /studio 200 in 271ms (next.js: 14ms, proxy.ts: 161ms, application-code: 96ms)
+ GET /studio 200 in 269ms (next.js: 58ms, proxy.ts: 159ms, application-code: 52ms)
+✓ Compiled in 109ms
+ GET / 200 in 470ms (next.js: 141ms, application-code: 330ms)
+ GET /studio 200 in 480ms (next.js: 66ms, proxy.ts: 303ms, application-code: 112ms)
+✓ Compiled in 253ms
+ GET / 200 in 83.9min (next.js: 1275ms, application-code: 83.8min)
+[browser] Failed to fetch RSC payload for http://localhost:3000/. Falling back to browser navigation. TypeError: Failed to fetch
+    at createFetch (file://C:/Users/Graph/Desktop/image generation/.next/dev/static/chunks/node_modules_next_dist_client_0r5nbpw._.js:8207:21)
+    at async fetchServerResponse (file://C:/Users/Graph/Desktop/image generation/.next/dev/static/chunks/node_modules_next_dist_client_0r5nbpw._.js:8051:21)
+    at async fetchMissingDynamicData (file://C:/Users/Graph/Desktop/image generation/.next/dev/static/chunks/node_modules_next_dist_client_0r5nbpw._.js:9464:24) (file://C:/Users/Graph/Desktop/image generation/.next/dev/static/chunks/node_modules_next_dist_client_0r5nbpw._.js:8128:21)
+ GET / 200 in 12.5s (next.js: 424ms, application-code: 12.0s)
+ GET / 200 in 16.2s (next.js: 1545ms, application-code: 14.7s)
+ GET / 200 in 2.9s (next.js: 285ms, application-code: 2.6s)
+ GET / 200 in 1870ms (next.js: 35ms, application-code: 1835ms)
+ GET /studio 200 in 1115ms (next.js: 349ms, proxy.ts: 228ms, application-code: 538ms)
+ GET /studio 200 in 878ms (next.js: 195ms, proxy.ts: 68ms, application-code: 616ms)
