@@ -10,15 +10,24 @@ declare global {
   var _mongoClientPromise: Promise<MongoClient> | undefined;
 }
 
+function connect(): Promise<MongoClient> {
+  return new MongoClient(uri as string).connect();
+}
+
 let clientPromise: Promise<MongoClient>;
 
 if (process.env.NODE_ENV === "development") {
   if (!global._mongoClientPromise) {
-    global._mongoClientPromise = new MongoClient(uri).connect();
+    global._mongoClientPromise = connect();
   }
+  // If the cached connection attempt failed, drop it so the next request
+  // retries instead of reusing the same rejected promise forever.
+  global._mongoClientPromise.catch(() => {
+    global._mongoClientPromise = undefined;
+  });
   clientPromise = global._mongoClientPromise;
 } else {
-  clientPromise = new MongoClient(uri).connect();
+  clientPromise = connect();
 }
 
 export default clientPromise;

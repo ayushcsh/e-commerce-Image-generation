@@ -1,6 +1,8 @@
+"use client";
+
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { auth, signIn } from "@/auth";
+import { signIn } from "next-auth/react";
+import { useState, useTransition } from "react";
 
 const errorMessages: Record<string, string> = {
   CredentialsSignin: "Invalid email or password.",
@@ -8,22 +10,55 @@ const errorMessages: Record<string, string> = {
   Default: "Sign in failed. Please try again."
 };
 
-export default async function LoginPage({
-  searchParams
-}: {
-  searchParams: Promise<{ callbackUrl?: string; error?: string }>;
-}) {
-  const params = await searchParams;
-  const callbackUrl = params.callbackUrl || "/studio";
-  const session = await auth();
+type Mode = "signin" | "register";
 
-  if (session) {
-    redirect(callbackUrl);
+export default function LoginPage() {
+  const [mode, setMode] = useState<Mode>("signin");
+  const [error, setError] = useState<string>("");
+  const [globalError, setGlobalError] = useState<string>("");
+  const [isPending, startTransition] = useTransition();
+  const callbackUrl = "/studio";
+
+  async function handleCredentials(formData: FormData) {
+    setError("");
+    const email = formData.get("email")?.toString().trim() ?? "";
+    const password = formData.get("password")?.toString() ?? "";
+
+    if (mode === "register") {
+      if (password.length < 8) {
+        setError("Password must be at least 8 characters.");
+        return;
+      }
+      startTransition(async () => {
+        try {
+          const res = await fetch("/api/auth/register", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, password }),
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            setError(data.error ?? "Registration failed.");
+            return;
+          }
+          // Auto sign-in after successful registration
+          await signIn("credentials", { email, password, redirectTo: callbackUrl });
+        } catch {
+          setError("Registration failed. Please try again.");
+        }
+      });
+    } else {
+      startTransition(async () => {
+        await signIn("credentials", { email, password, redirectTo: callbackUrl });
+      });
+    }
   }
 
-  const errorMessage = params.error
-    ? errorMessages[params.error] || errorMessages.Default
-    : "";
+  function handleGoogle() {
+    startTransition(async () => {
+      await signIn("google", { redirectTo: callbackUrl });
+    });
+  }
 
   return (
     <main className="loginPage">
@@ -32,9 +67,7 @@ export default async function LoginPage({
 
         <section className="loginPanel">
           <Link className="loginBrand" href="/">
-            <span className="brandMark" aria-hidden="true">
-              AI
-            </span>
+            <span className="brandMark" aria-hidden="true">AI</span>
             <span>
               <strong>AI Product Image Studio</strong>
               <small>Marketplace visuals from product photos</small>
@@ -42,24 +75,44 @@ export default async function LoginPage({
           </Link>
 
           <div className="loginCopy">
-            <h1>Create an account</h1>
-            <p>Access your tasks, notes, and projects anytime, anywhere — and keep everything flowing in one place.</p>
+            <h1>{mode === "signin" ? "Sign in to your account" : "Create your account"}</h1>
+            <p>{mode === "signin"
+              ? "Welcome back. Enter your credentials to continue."
+              : "Sign up to start creating marketplace-ready product images."}
+            </p>
           </div>
 
-          {errorMessage ? <p className="loginError">{errorMessage}</p> : null}
+          {globalError ? <p className="loginError">{globalError}</p> : null}
 
-          <form
-            className="loginForm"
-            action={async (formData: FormData) => {
-              "use server";
-              const email = formData.get("email")?.toString().trim() ?? "";
-              const password = formData.get("password")?.toString() ?? "";
-              await signIn("credentials", { email, password, redirectTo: callbackUrl });
-            }}
-          >
+          {/* Mode toggle */}
+          <div className="modeToggle">
+            <button
+              type="button"
+              className={`toggleBtn${mode === "signin" ? " isActive" : ""}`}
+              onClick={() => { setMode("signin"); setError(""); }}
+            >
+              Sign In
+            </button>
+            <button
+              type="button"
+              className={`toggleBtn${mode === "register" ? " isActive" : ""}`}
+              onClick={() => { setMode("register"); setError(""); }}
+            >
+              Create Account
+            </button>
+          </div>
+
+          <form className="loginForm" onSubmit={(e) => { e.preventDefault(); handleCredentials(new FormData(e.currentTarget)); }}>
             <label className="inputGroup">
               <span>Email</span>
-              <input name="email" type="email" required autoComplete="email" placeholder="you@example.com" />
+              <input
+                name="email"
+                type="email"
+                required
+                autoComplete="email"
+                placeholder="you@example.com"
+                disabled={isPending}
+              />
             </label>
 
             <label className="inputGroup">
@@ -68,14 +121,17 @@ export default async function LoginPage({
                 name="password"
                 type="password"
                 required
-                minLength={6}
-                autoComplete="current-password"
-                placeholder="Enter your password"
+                minLength={8}
+                autoComplete={mode === "register" ? "new-password" : "current-password"}
+                placeholder={mode === "register" ? "At least 8 characters" : "Enter your password"}
+                disabled={isPending}
               />
             </label>
 
-            <button className="primaryButton" type="submit">
-              Continue with email
+            {error ? <p className="loginError">{error}</p> : null}
+
+            <button className="primaryButton" type="submit" disabled={isPending}>
+              {isPending ? "Please wait..." : mode === "signin" ? "Sign In" : "Create Account"}
             </button>
           </form>
 
@@ -83,40 +139,29 @@ export default async function LoginPage({
             <span>or continue with</span>
           </div>
 
-          <form
-            action={async () => {
-              "use server";
-              await signIn("google", { redirectTo: callbackUrl });
-            }}
+          <button
+            className="googleButton"
+            type="button"
+            onClick={handleGoogle}
+            disabled={isPending}
           >
-            <button className="googleButton" type="submit">
-              <svg className="googleIcon" viewBox="0 0 18 18" aria-hidden="true">
-                <path
-                  fill="#4285F4"
-                  d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.9c1.7-1.56 2.7-3.87 2.7-6.62z"
-                />
-                <path
-                  fill="#34A853"
-                  d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.9-2.26c-.8.54-1.84.86-3.06.86-2.35 0-4.34-1.59-5.05-3.72H.96v2.33A9 9 0 0 0 9 18z"
-                />
-                <path
-                  fill="#FBBC05"
-                  d="M3.95 10.7A5.4 5.4 0 0 1 3.67 9c0-.59.1-1.16.28-1.7V4.97H.96A9 9 0 0 0 0 9c0 1.45.35 2.83.96 4.03l2.99-2.33z"
-                />
-                <path
-                  fill="#EA4335"
-                  d="M9 3.58c1.32 0 2.51.46 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0A9 9 0 0 0 .96 4.97l2.99 2.33C4.66 5.17 6.65 3.58 9 3.58z"
-                />
-              </svg>
-              Continue with Google
-            </button>
-          </form>
+            <svg className="googleIcon" viewBox="0 0 18 18" aria-hidden="true">
+              <path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.9c1.7-1.56 2.7-3.87 2.7-6.62z" />
+              <path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.9-2.26c-.8.54-1.84.86-3.06.86-2.35 0-4.34-1.59-5.05-3.72H.96v2.33A9 9 0 0 0 9 18z" />
+              <path fill="#FBBC05" d="M3.95 10.7A5.4 5.4 0 0 1 3.67 9c0-.59.1-1.16.28-1.7V4.97H.96A9 9 0 0 0 0 9c0 1.45.35 2.83.96 4.03l2.99-2.33z" />
+              <path fill="#EA4335" d="M9 3.58c1.32 0 2.51.46 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0A9 9 0 0 0 .96 4.97l2.99 2.33C4.66 5.17 6.65 3.58 9 3.58z" />
+            </svg>
+            Continue with Google
+          </button>
 
           <p className="loginFooter">
-            Need an account? Sign up with Google or ask your admin to create your login.
+            {mode === "signin"
+              ? "No account yet? Switch to Create Account above."
+              : "Already have an account? Switch to Sign In above."}
           </p>
         </section>
       </div>
     </main>
   );
 }
+

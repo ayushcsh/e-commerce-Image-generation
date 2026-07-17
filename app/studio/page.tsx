@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { signOut, useSession } from "next-auth/react";
 import {
   type ChangeEvent,
   type CSSProperties,
@@ -10,10 +10,22 @@ import {
   type FormEvent,
   type ReactNode,
   useEffect,
-  useMemo,
   useRef,
   useState
 } from "react";
+import JSZip from "jszip";
+import type { ProductAnalysis } from "@/app/api/analyze/route";
+import type { AllListings } from "@/app/api/listing/route";
+import {
+  exportAmazonCsv,
+  exportShopifyCsv,
+  exportFlipkartCsv,
+  exportMeeshoCsv,
+  exportEtsyCsv,
+  exportWooCommerceCsv,
+  exportJson,
+  type BriefForExport
+} from "@/lib/export";
 
 type UploadedImage = {
   id: string;
@@ -21,6 +33,32 @@ type UploadedImage = {
   size: string;
   url: string;
   file: File;
+};
+
+type GeneratedImageResult = {
+  type: string;
+  mimeType: string;
+  /** Base64 for immediate display */
+  data: string;
+  /** R2 storage key */
+  storageKey?: string;
+  /** R2 public URL */
+  url?: string;
+  width?: number;
+  height?: number;
+  /** Whether this is an A+ image (GPT Image 2) */
+  isAplus?: boolean;
+};
+
+type HistoryItem = {
+  id: string;
+  productName: string;
+  category: string;
+  marketplaces: string[];
+  createdAt: string;
+  thumbnail: string | null;
+  thumbnailMimeType: string | null;
+  imageCount: number;
 };
 
 type BriefState = {
@@ -50,6 +88,17 @@ type BriefState = {
   countryOfOrigin: string;
   packageContents: string;
   customPrompt: string;
+  variantSets: string;
+  quantityPerSet: string;
+  customWidth: string;
+  customHeight: string;
+};
+
+type Notification = {
+  id: string;
+  type: "success" | "error" | "info";
+  message: string;
+  fields?: string[];
 };
 
 const MAX_PHOTOS = 12;
@@ -59,86 +108,86 @@ const MAX_PRODUCT_COLORS = 6;
 const MAX_BRAND_COLORS = 4;
 
 const CATEGORY_SUGGESTIONS = [
-  "Electronics",
-  "Clothing",
-  "Furniture",
-  "Beauty",
-  "Grocery",
-  "Home & Kitchen",
-  "Sports & Outdoors",
-  "Toys & Games",
-  "Health & Personal Care"
+  "Electronics", "Clothing", "Furniture", "Beauty", "Grocery",
+  "Home & Kitchen", "Sports & Outdoors", "Toys & Games", "Health & Personal Care"
 ];
 
 const MARKETPLACES = ["Amazon", "Flipkart", "Meesho", "Myntra", "Ajio", "Shopify", "WooCommerce", "Custom"];
-
 const BACKGROUND_OPTIONS = ["Pure White", "Transparent", "Lifestyle", "Gradient", "Custom Color"];
-
 const FONT_STYLES = ["Modern", "Classic", "Bold", "Elegant", "Minimal", "Playful"];
 
-const IMAGE_TYPES = [
-  "Main Listing Image",
-  "Infographic",
-  "Feature Highlight",
-  "Lifestyle Image",
-  "Comparison Image",
-  "Size Guide",
-  "Packaging Showcase",
-  "Premium Banner"
+// Basic image types — nano-banana, $0.15 each
+const BASIC_IMAGE_TYPES = [
+  "Main Product (White Background)",
+  "Front/Side Angle",
+  "Key Features Infographic",
+  "Dimensions",
+  "Product in Use (Lifestyle)",
+  "Close-up / Material Quality",
+  "What's in the Box",
+  "Comparison / Benefits",
+  "Brand Story / Warranty",
+];
+
+// A+ Listing image types — GPT Image 2, $0.90 each
+const APLUS_IMAGE_TYPES = [
+  { id: "Standard Banner",         label: "Standard Banner",          hint: "970×300 · wide top banner",           size: "970x300"   },
+  { id: "Banner with Text Overlay",label: "Banner with Text Overlay",hint: "970×300 · headline overlay banner",   size: "970x300"   },
+  { id: "Standard Image & Text",   label: "Standard Image & Text",   hint: "1000×1000 · 50/50 split",           size: "1000x1000" },
+  { id: "Three Image Module",      label: "Three Image Module",      hint: "1464×400 · 3-panel row",             size: "1464x400"  },
+  { id: "Four Image Module",       label: "Four Image Module",       hint: "1464×800 · 2×2 grid",               size: "1464x800"  },
+];
+
+const PRICING = {
+  basic: 0.15,  // $0.15 per basic image
+  aplus: 0.90,  // $0.90 per A+ image (GPT Image 2)
+} as const;
+
+// Display labels with optional badges for image types
+const IMAGE_TYPE_LABELS: Record<string, string> = {
+  "A+ Product Photo ⬜": "A+ Photo ★",
+  "A+ Lifestyle Banner ⬛": "A+ Banner ★",
+};
+
+// Quick A+ size presets (Amazon A+ Content module sizes)
+const APLU_SIZE_PRESETS = [
+  { label: "A+ Hero Banner 970×600", width: 970, height: 600 },
+  { label: "A+ Wide Banner 970×300", width: 970, height: 300 },
+  { label: "A+ Brand Story 970×520", width: 970, height: 520 },
+  { label: "A+ Premium Banner 1464×600", width: 1464, height: 600 },
+  { label: "A+ Module Image 300×300", width: 300, height: 300 },
+  { label: "Square 2000×2000", width: 2000, height: 2000 },
+  { label: "Widescreen 3000×1200", width: 3000, height: 1200 },
+  { label: "Cinema 2560×720", width: 2560, height: 720 },
 ];
 
 const AI_IMAGE_STYLES = ["Minimal", "Premium", "Luxury", "Modern", "Colorful", "Professional"];
-
 const TEXT_ON_IMAGE_OPTIONS = ["No Text", "Minimal Text", "Feature Highlights", "Promotional"];
-
 const LANGUAGE_OPTIONS = ["English", "Hindi", "Both"];
-
 const IMAGE_FORMATS = ["PNG", "JPG", "WebP"];
-
 const RESOLUTIONS = ["Standard", "HD", "4K"];
 
 const initialBrief: BriefState = {
-  productName: "",
-  category: "",
-  brandName: "",
-  sku: "",
-  background: BACKGROUND_OPTIONS[0],
-  customBackgroundColor: "#ffffff",
-  customMarketplace: "",
-  material: "",
-  dimensions: "",
-  weight: "",
-  fontStyle: FONT_STYLES[0],
-  aiStyle: AI_IMAGE_STYLES[0],
-  textOnImage: TEXT_ON_IMAGE_OPTIONS[0],
-  language: LANGUAGE_OPTIONS[0],
-  imageFormat: IMAGE_FORMATS[0],
-  resolution: RESOLUTIONS[1],
-  description: "",
-  targetAudience: "",
-  sellingPrice: "",
-  mrp: "",
-  discountPercent: "",
-  specialOffers: "",
-  warranty: "",
-  countryOfOrigin: "",
-  packageContents: "",
-  customPrompt: ""
+  productName: "", category: "", brandName: "", sku: "",
+  background: BACKGROUND_OPTIONS[0], customBackgroundColor: "#ffffff", customMarketplace: "",
+  material: "", dimensions: "", weight: "",
+  fontStyle: FONT_STYLES[0], aiStyle: AI_IMAGE_STYLES[0],
+  textOnImage: TEXT_ON_IMAGE_OPTIONS[0], language: LANGUAGE_OPTIONS[0],
+  imageFormat: IMAGE_FORMATS[0], resolution: RESOLUTIONS[1],
+  description: "", targetAudience: "", sellingPrice: "", mrp: "",
+  discountPercent: "", specialOffers: "", warranty: "",
+  countryOfOrigin: "", packageContents: "", customPrompt: "",
+  variantSets: "1", quantityPerSet: "1", customWidth: "", customHeight: ""
 };
 
+// ── Utility helpers ──────────────────────────────────────────────────────────────
 function formatBytes(bytes: number) {
-  if (bytes < 1024 * 1024) {
-    return `${Math.max(1, Math.round(bytes / 1024))} KB`;
-  }
-
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 function createImageId(file: File, index: number) {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
-    return crypto.randomUUID();
-  }
-
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
   return `${file.name}-${file.lastModified}-${index}`;
 }
 
@@ -146,28 +195,81 @@ function toggleValue(list: string[], value: string) {
   return list.includes(value) ? list.filter((item) => item !== value) : [...list, value];
 }
 
-function PillGroup({
-  legend,
-  options,
-  value,
-  onChange
-}: {
-  legend: string;
-  options: string[];
-  value: string;
-  onChange: (value: string) => void;
+function generateId() {
+  return Math.random().toString(36).slice(2);
+}
+
+function formatHistoryTime(isoString: string): string {
+  const date = new Date(isoString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMins / 60);
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffMins < 1) return "Just now";
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return date.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+}
+
+function getImageSrc(image: GeneratedImageResult): string {
+  if (image.data) return `data:${image.mimeType};base64,${image.data}`;
+  if (image.url) return image.url;
+  return "";
+}
+
+// ── Notification Toast ──────────────────────────────────────────────────────────
+function NotificationToast({ notification, onDismiss }: { notification: Notification; onDismiss: () => void }) {
+  const [visible, setVisible] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setVisible(false);
+      setTimeout(onDismiss, 400);
+    }, 6000);
+    return () => clearTimeout(timer);
+  }, [onDismiss]);
+
+  const bgColor = notification.type === "success"
+    ? "rgba(22, 163, 74, 0.95)"
+    : notification.type === "error"
+    ? "rgba(220, 38, 38, 0.95)"
+    : "rgba(37, 99, 235, 0.95)";
+
+  const icon = notification.type === "success" ? "✓" : notification.type === "error" ? "✕" : "ℹ";
+
+  return (
+    <div
+      className={`notificationToast ${visible ? "toastVisible" : "toastHidden"}`}
+      style={{ background: bgColor }}
+      role="alert"
+    >
+      <span className="toastIcon" aria-hidden="true">{icon}</span>
+      <div className="toastContent">
+        <p className="toastMessage">{notification.message}</p>
+        {notification.fields && notification.fields.length > 0 && (
+          <p className="toastFields">Auto-filled: {notification.fields.join(" · ")}</p>
+        )}
+      </div>
+      <button className="toastDismiss" onClick={() => { setVisible(false); setTimeout(onDismiss, 400); }} aria-label="Dismiss">
+        ✕
+      </button>
+    </div>
+  );
+}
+
+// ── Reusable UI components ──────────────────────────────────────────────────────
+function PillGroup({ legend, options, value, onChange }: {
+  legend: string; options: string[]; value: string; onChange: (v: string) => void;
 }) {
   return (
     <div className="controlGroup">
       <span className="controlLabel">{legend}</span>
       <div className="pillGroup">
         {options.map((option) => (
-          <button
-            className={value === option ? "isSelected" : ""}
-            key={option}
-            type="button"
-            onClick={() => onChange(option)}
-          >
+          <button className={value === option ? "isSelected" : ""} key={option} type="button" onClick={() => onChange(option)}>
             {option}
           </button>
         ))}
@@ -176,20 +278,8 @@ function PillGroup({
   );
 }
 
-function CheckGrid({
-  legend,
-  hint,
-  options,
-  values,
-  onToggle,
-  columns = 3
-}: {
-  legend: ReactNode;
-  hint?: string;
-  options: string[];
-  values: string[];
-  onToggle: (option: string) => void;
-  columns?: number;
+function CheckGrid({ legend, hint, options, values, onToggle, columns = 3 }: {
+  legend: ReactNode; hint?: string; options: string[]; values: string[]; onToggle: (v: string) => void; columns?: number;
 }) {
   return (
     <fieldset className="checkFieldset">
@@ -207,33 +297,16 @@ function CheckGrid({
   );
 }
 
-function ChipInput({
-  legend,
-  hint,
-  values,
-  onAdd,
-  onRemove,
-  placeholder,
-  max,
-  withColorPicker
-}: {
-  legend: string;
-  hint?: string;
-  values: string[];
-  onAdd: (value: string) => void;
-  onRemove: (value: string) => void;
-  placeholder?: string;
-  max?: number;
-  withColorPicker?: boolean;
+function ChipInput({ legend, hint, values, onAdd, onRemove, placeholder, max, withColorPicker }: {
+  legend: string; hint?: string; values: string[]; onAdd: (v: string) => void; onRemove: (v: string) => void;
+  placeholder?: string; max?: number; withColorPicker?: boolean;
 }) {
   const [draft, setDraft] = useState("");
   const atLimit = Boolean(max) && values.length >= (max ?? 0);
 
   function commit() {
     const trimmed = draft.trim();
-    if (!trimmed || atLimit) {
-      return;
-    }
+    if (!trimmed || atLimit) return;
     onAdd(trimmed);
     setDraft("");
   }
@@ -242,43 +315,18 @@ function ChipInput({
     <div className="chipField">
       <div className="chipFieldHead">
         <span>{legend}</span>
-        {max ? (
-          <small>
-            {values.length}/{max}
-          </small>
-        ) : null}
+        {max ? <small>{values.length}/{max}</small> : null}
       </div>
       {hint ? <p className="fieldHint">{hint}</p> : null}
       <div className="chipInputRow">
-        <input
-          type="text"
-          value={draft}
-          onChange={(event) => setDraft(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              event.preventDefault();
-              commit();
-            }
-          }}
-          placeholder={placeholder}
-          disabled={atLimit}
-        />
+        <input type="text" value={draft} onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); commit(); } }}
+          placeholder={placeholder} disabled={atLimit} />
         {withColorPicker ? (
-          <input
-            className="colorPicker"
-            type="color"
-            aria-label={`Pick a color for ${legend}`}
-            onChange={(event) => {
-              if (atLimit) {
-                return;
-              }
-              onAdd(event.target.value);
-            }}
-          />
+          <input className="colorPicker" type="color" aria-label={`Pick a color for ${legend}`}
+            onChange={(e) => { if (!atLimit) onAdd(e.target.value); }} />
         ) : null}
-        <button className="chipAddButton" type="button" onClick={commit} disabled={atLimit}>
-          Add
-        </button>
+        <button className="chipAddButton" type="button" onClick={commit} disabled={atLimit}>Add</button>
       </div>
       {values.length > 0 ? (
         <div className="chipList">
@@ -288,9 +336,7 @@ function ChipInput({
                 <i className="chipSwatch" style={{ background: value }} aria-hidden="true" />
               ) : null}
               {value}
-              <button type="button" onClick={() => onRemove(value)} aria-label={`Remove ${value}`}>
-                &times;
-              </button>
+              <button type="button" onClick={() => onRemove(value)} aria-label={`Remove ${value}`}>&times;</button>
             </span>
           ))}
         </div>
@@ -299,18 +345,8 @@ function ChipInput({
   );
 }
 
-function FormSection({
-  id,
-  eyebrow,
-  title,
-  description,
-  children
-}: {
-  id?: string;
-  eyebrow: string;
-  title: string;
-  description?: string;
-  children: ReactNode;
+function FormSection({ id, eyebrow, title, description, children }: {
+  id?: string; eyebrow: string; title: string; description?: string; children: ReactNode;
 }) {
   return (
     <section className="formSection" id={id}>
@@ -324,20 +360,319 @@ function FormSection({
   );
 }
 
+// ── Listing Panel ───────────────────────────────────────────────────────────────
+type ActiveTab = "amazon" | "flipkart" | "meesho" | "myntra" | "shopify" | "etsy";
+
+function ListingPanel({ listings, brief, onClose }: {
+  listings: AllListings; brief: BriefForExport; onClose: () => void;
+}) {
+  const [activeTab, setActiveTab] = useState<ActiveTab>("amazon");
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  const tabs: { id: ActiveTab; label: string }[] = [
+    { id: "amazon", label: "Amazon" }, { id: "flipkart", label: "Flipkart" },
+    { id: "meesho", label: "Meesho" }, { id: "myntra", label: "Myntra" },
+    { id: "shopify", label: "Shopify" }, { id: "etsy", label: "Etsy" }
+  ];
+
+  function copyToClipboard(text: string, field: string) {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedField(field);
+      setTimeout(() => setCopiedField(null), 2000);
+    });
+  }
+
+  function handleExport(format: string) {
+    const slug = (brief.productName || "product").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    let content: string; let filename: string; const mimeType = "text/csv;charset=utf-8";
+
+    switch (format) {
+      case "amazon":      content = exportAmazonCsv(brief, listings);      filename = `${slug}-amazon.csv`;        break;
+      case "flipkart":    content = exportFlipkartCsv(brief, listings);    filename = `${slug}-flipkart.csv`;       break;
+      case "meesho":      content = exportMeeshoCsv(brief, listings);      filename = `${slug}-meesho.csv`;         break;
+      case "shopify":     content = exportShopifyCsv(brief, listings);     filename = `${slug}-shopify.csv`;        break;
+      case "etsy":        content = exportEtsyCsv(brief, listings);        filename = `${slug}-etsy.csv`;           break;
+      case "woocommerce":  content = exportWooCommerceCsv(brief, listings); filename = `${slug}-woocommerce.csv`;    break;
+      case "json":
+        content = exportJson({ brief, listings, generatedAt: new Date().toISOString() });
+        filename = `${slug}-listing.json`;
+        break;
+      default: return;
+    }
+
+    const blob = new Blob([content], { type: format === "json" ? "application/json" : mimeType });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url; link.download = filename;
+    document.body.appendChild(link); link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
+
+  const current = listings[activeTab];
+
+  return (
+    <div className="listingPanelOverlay">
+      <div className="listingPanel listingPanelWide">
+        <div className="listingPanelHeader">
+          <h2>AI Generated Listings</h2>
+          <button className="ghostButton" type="button" onClick={onClose} aria-label="Close">✕</button>
+        </div>
+
+        <div className="listingTabs">
+          {tabs.map((tab) => (
+            <button key={tab.id}
+              className={`listingTab${activeTab === tab.id ? " isActive" : ""}`}
+              type="button" onClick={() => setActiveTab(tab.id)}>
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="listingContent">
+          {current.title ? <FieldBlock label="Title" value={current.title}
+            copied={copiedField === `${activeTab}-title`}
+            onCopy={() => copyToClipboard(current.title!, `${activeTab}-title`)} /> : null}
+
+          {current.bullets && current.bullets.length > 0 && (
+            <div className="listingField">
+              <div className="listingFieldHead">
+                <span>Bullet Points</span>
+                <button className="ghostButton compactButton" type="button"
+                  onClick={() => copyToClipboard(current.bullets!.join("\n"), `${activeTab}-bullets`)}>
+                  {copiedField === `${activeTab}-bullets` ? "Copied!" : "Copy all"}
+                </button>
+              </div>
+              {current.bullets.map((b, i) => (
+                <div key={i} className="listingBullet">
+                  <span className="bulletNum">{i + 1}</span>
+                  <span className="bulletText">{b}</span>
+                  <button className="ghostButton compactButton" type="button"
+                    onClick={() => copyToClipboard(b, `${activeTab}-bullet-${i}`)}>
+                    {copiedField === `${activeTab}-bullet-${i}` ? "✓" : "Copy"}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {current.highlights && current.highlights.length > 0 && (
+            <div className="listingField">
+              <div className="listingFieldHead">
+                <span>Highlights</span>
+                <button className="ghostButton compactButton" type="button"
+                  onClick={() => copyToClipboard(current.highlights!.join("\n"), `${activeTab}-highlights`)}>
+                  {copiedField === `${activeTab}-highlights` ? "Copied!" : "Copy all"}
+                </button>
+              </div>
+              {current.highlights.map((h, i) => (
+                <div key={i} className="listingBullet">
+                  <span className="bulletText">{h}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {current.description ? <FieldBlock label="Description" value={current.description}
+            copied={copiedField === `${activeTab}-desc`}
+            onCopy={() => copyToClipboard(current.description!, `${activeTab}-desc`)} multiline /> : null}
+
+          {current.keywords && current.keywords.length > 0 && (
+            <div className="listingField">
+              <div className="listingFieldHead">
+                <span>Backend Keywords</span>
+                <button className="ghostButton compactButton" type="button"
+                  onClick={() => copyToClipboard(current.keywords!.join(", "), `${activeTab}-keywords`)}>
+                  {copiedField === `${activeTab}-keywords` ? "Copied!" : "Copy all"}
+                </button>
+              </div>
+              <div className="chipList">
+                {current.keywords.map((k) => <span className="chip" key={k}>{k}</span>)}
+              </div>
+            </div>
+          )}
+
+          {current.tags && current.tags.length > 0 && (
+            <div className="listingField">
+              <div className="listingFieldHead">
+                <span>Tags</span>
+                <button className="ghostButton compactButton" type="button"
+                  onClick={() => copyToClipboard(current.tags!.join(", "), `${activeTab}-tags`)}>
+                  {copiedField === `${activeTab}-tags` ? "Copied!" : "Copy all"}
+                </button>
+              </div>
+              <div className="chipList">
+                {current.tags.map((t) => <span className="chip" key={t}>{t}</span>)}
+              </div>
+            </div>
+          )}
+
+          {current.seoTitle ? <FieldBlock label="SEO Title" value={current.seoTitle}
+            copied={copiedField === `${activeTab}-seo-title`}
+            onCopy={() => copyToClipboard(current.seoTitle!, `${activeTab}-seo-title`)} /> : null}
+
+          {current.seoDescription ? <FieldBlock label="SEO Description" value={current.seoDescription}
+            copied={copiedField === `${activeTab}-seo-desc`}
+            onCopy={() => copyToClipboard(current.seoDescription!, `${activeTab}-seo-desc`)} /> : null}
+
+          {current.material ? <FieldBlock label="Material" value={current.material}
+            copied={copiedField === `${activeTab}-material`}
+            onCopy={() => copyToClipboard(current.material!, `${activeTab}-material`)} /> : null}
+
+          {current.occasion ? <FieldBlock label="Occasion" value={current.occasion}
+            copied={copiedField === `${activeTab}-occasion`}
+            onCopy={() => copyToClipboard(current.occasion!, `${activeTab}-occasion`)} /> : null}
+
+          {!current.title && !current.description && (
+            <div className="listingEmpty">
+              <p>No listing content generated for {activeTab}.</p>
+              <small>Make sure {activeTab} is selected in your Marketplace options above.</small>
+            </div>
+          )}
+        </div>
+
+        <div className="listingPanelFooter listingPanelFooterExport">
+          <span className="exportLabel">Export:</span>
+          {activeTab === "amazon"     && <button className="secondaryButton compactButton" type="button" onClick={() => handleExport("amazon")}>Amazon CSV ⬇</button>}
+          {activeTab === "flipkart"   && <button className="secondaryButton compactButton" type="button" onClick={() => handleExport("flipkart")}>Flipkart CSV ⬇</button>}
+          {activeTab === "meesho"     && <button className="secondaryButton compactButton" type="button" onClick={() => handleExport("meesho")}>Meesho CSV ⬇</button>}
+          {activeTab === "myntra"     && <button className="secondaryButton compactButton" type="button" onClick={() => handleExport("flipkart")}>Myntra CSV ⬇</button>}
+          {activeTab === "shopify"    && <button className="secondaryButton compactButton" type="button" onClick={() => handleExport("shopify")}>Shopify CSV ⬇</button>}
+          {activeTab === "etsy"       && <button className="secondaryButton compactButton" type="button" onClick={() => handleExport("etsy")}>Etsy CSV ⬇</button>}
+          <button className="secondaryButton compactButton" type="button" onClick={() => handleExport("woocommerce")}>WooCommerce ⬇</button>
+          <button className="secondaryButton compactButton" type="button" onClick={() => handleExport("json")}>JSON ⬇</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FieldBlock({ label, value, copied, onCopy, multiline = false }: {
+  label: string; value: string; copied: boolean; onCopy: () => void; multiline?: boolean;
+}) {
+  return (
+    <div className="listingField">
+      <div className="listingFieldHead">
+        <span>{label}</span>
+        <button className="ghostButton compactButton" type="button" onClick={onCopy}>
+          {copied ? "Copied!" : "Copy"}
+        </button>
+      </div>
+      {multiline ? <div className="listingMultiline">{value}</div> : <p className="listingValue">{value}</p>}
+    </div>
+  );
+}
+
+// ── Main Studio Page ────────────────────────────────────────────────────────────
 export default function StudioPage() {
+  const { data: session } = useSession();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
   const imagesRef = useRef<UploadedImage[]>([]);
+  const [showUserMenu, setShowUserMenu] = useState(false);
   const [images, setImages] = useState<UploadedImage[]>([]);
   const [logo, setLogo] = useState<UploadedImage | null>(null);
   const [brief, setBrief] = useState<BriefState>(initialBrief);
   const [marketplaces, setMarketplaces] = useState<string[]>([]);
-  const [imageTypes, setImageTypes] = useState<string[]>([IMAGE_TYPES[0]]);
+  const [selectedBasicTypes, setSelectedBasicTypes] = useState<string[]>([]);
+  const [selectedAplusTypes, setSelectedAplusTypes] = useState<string[]>([]);
   const [keyFeatures, setKeyFeatures] = useState<string[]>([]);
   const [productColors, setProductColors] = useState<string[]>([]);
   const [brandColors, setBrandColors] = useState<string[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [generatedImages, setGeneratedImages] = useState<GeneratedImageResult[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [lightboxImage, setLightboxImage] = useState<GeneratedImageResult | null>(null);
+  const resultsRef = useRef<HTMLDivElement>(null);
+  const analyzeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const [isGeneratingListing, setIsGeneratingListing] = useState(false);
+  const [listings, setListings] = useState<AllListings | null>(null);
+  const [showListingPanel, setShowListingPanel] = useState(false);
+
+  // ── History sidebar ────────────────────────────────────────────────────────
+  const [showHistory, setShowHistory] = useState(false);
+  const [historyItems, setHistoryItems] = useState<HistoryItem[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null);
+
+  // ── Credits ─────────────────────────────────────────────────────────────────
+  const [creditBalance, setCreditBalance] = useState<number>(0);
+  const [creditsLoading, setCreditsLoading] = useState(false);
+
+  function loadCredits() {
+    setCreditsLoading(true);
+    fetch("/api/credits")
+      .then((r) => r.json())
+      .then((data) => {
+        if (typeof data.balance === "number") setCreditBalance(data.balance);
+      })
+      .catch(console.error)
+      .finally(() => setCreditsLoading(false));
+  }
+
+  useEffect(() => {
+    loadCredits();
+  }, []);
+
+  // Calculate cost preview
+  const selectedCost = {
+    basic: selectedBasicTypes.length,
+    aplus: selectedAplusTypes.length,
+    total: selectedBasicTypes.length * PRICING.basic + selectedAplusTypes.length * PRICING.aplus,
+  };
+  const canAfford = creditBalance >= selectedCost.total;
+
+  function loadHistory() {
+    setHistoryLoading(true);
+    fetch("/api/history")
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data)) setHistoryItems(data);
+      })
+      .catch(console.error)
+      .finally(() => setHistoryLoading(false));
+  }
+
+  useEffect(() => {
+    if (showHistory && historyItems.length === 0) loadHistory();
+  }, [showHistory]);
+
+  async function loadHistoryItem(id: string) {
+    setActiveHistoryId(id);
+    try {
+      const res = await fetch(`/api/history/${id}`);
+      const data = await res.json();
+      if (data.images) {
+        setGeneratedImages(
+          data.images.map((img: { type: string; mimeType: string; url: string; storageKey?: string; isAplus?: boolean }) => ({
+            type: img.type,
+            mimeType: img.mimeType,
+            data: "",
+            url: img.url,
+            storageKey: img.storageKey,
+            isAplus: img.isAplus,
+          }))
+        );
+        setShowHistory(false);
+        setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setActiveHistoryId(null);
+    }
+  }
+
+  function handleGenerationSuccess(newImages: GeneratedImageResult[], newId?: string) {
+    setGeneratedImages(newImages);
+    loadHistory();
+    loadCredits(); // Refresh credit balance
+    setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
+  }
 
   useEffect(() => {
     imagesRef.current = images;
@@ -346,59 +681,167 @@ export default function StudioPage() {
   useEffect(() => {
     return () => {
       imagesRef.current.forEach((image) => URL.revokeObjectURL(image.url));
-      if (logo) {
-        URL.revokeObjectURL(logo.url);
-      }
+      if (logo) URL.revokeObjectURL(logo.url);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  function addNotification(notification: Omit<Notification, "id">) {
+    const id = generateId();
+    setNotifications((prev) => [...prev, { ...notification, id }]);
+  }
+
+  function dismissNotification(id: string) {
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  }
 
   function updateBrief(field: keyof BriefState, value: string) {
     setBrief((current) => ({ ...current, [field]: value }));
   }
 
+  // ── Auto-analyze on photo upload ─────────────────────────────────────────────
   function addFiles(fileList: FileList | File[]) {
     const incoming = Array.from(fileList).filter((file) => file.type.startsWith("image/"));
-
-    if (incoming.length === 0) {
-      return;
-    }
+    if (incoming.length === 0) return;
 
     setImages((current) => {
       const openSlots = Math.max(0, MAX_PHOTOS - current.length);
       const nextImages = incoming.slice(0, openSlots).map((file, index) => ({
-        id: createImageId(file, index),
-        name: file.name,
-        size: formatBytes(file.size),
-        url: URL.createObjectURL(file),
-        file
+        id: createImageId(file, index), name: file.name, size: formatBytes(file.size),
+        url: URL.createObjectURL(file), file
       }));
-
-      if (nextImages.length > 0) {
-        setStatusMessage("");
-      }
-
+      if (nextImages.length > 0) setStatusMessage("");
       return [...current, ...nextImages];
     });
+
+    // Clear existing timer and set new one to auto-analyze after a short delay
+    if (analyzeTimerRef.current) clearTimeout(analyzeTimerRef.current);
+    analyzeTimerRef.current = setTimeout(() => {
+      // Only analyze if we now have photos and the user hasn't manually edited the form
+      setImages((current) => {
+        if (current.length > 0 && !isAnalyzing) {
+          triggerAnalyze(current);
+        }
+        return current;
+      });
+    }, 1500);
+  }
+
+  async function triggerAnalyze(imgs: UploadedImage[]) {
+    if (isAnalyzing || imgs.length === 0) return;
+    setIsAnalyzing(true);
+    setStatusMessage("AI is analyzing your photos...");
+
+    const formData = new FormData();
+    imgs.forEach((img) => formData.append("photos", img.file));
+
+    try {
+      const response = await fetch("/api/analyze", { method: "POST", body: formData });
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Analysis failed.");
+      }
+
+      applyAnalysis(result);
+      addNotification({
+        type: "success",
+        message: `✓ AI detected: ${result.productType || "product"}`,
+        fields: [
+          result.material !== "Unknown" ? result.material : null,
+          result.color !== "Unknown" ? result.color : null,
+          result.targetAudience !== "General" ? result.targetAudience : null,
+          ...(result.keyFeatures ?? []).slice(0, 2)
+        ].filter(Boolean) as string[]
+      });
+    } catch (error) {
+      addNotification({
+        type: "error",
+        message: error instanceof Error ? error.message : "Analysis failed."
+      });
+    } finally {
+      setIsAnalyzing(false);
+      setStatusMessage("");
+    }
+  }
+
+  function applyAnalysis(result: ProductAnalysis) {
+    const filledFields: string[] = [];
+
+    setBrief((prev) => {
+      const next = { ...prev };
+
+      if (result.productType && result.productType !== "Unknown" && result.productType !== "Review Raw") {
+        next.productName = prev.productName || result.productType;
+        filledFields.push(result.productType);
+      }
+
+      if (result.brand && result.brand !== "Unknown") {
+        next.brandName = prev.brandName || result.brand;
+        filledFields.push(`Brand: ${result.brand}`);
+      }
+
+      if (result.material && result.material !== "Unknown") {
+        next.material = prev.material || result.material;
+        filledFields.push(result.material);
+      }
+
+      if (result.dimensions && result.dimensions !== "Not visible") {
+        next.dimensions = prev.dimensions || result.dimensions;
+      }
+
+      if (result.weight && result.weight !== "Not visible") {
+        next.weight = prev.weight || result.weight;
+      }
+
+      if (result.targetAudience && result.targetAudience !== "General") {
+        next.targetAudience = prev.targetAudience || result.targetAudience;
+        filledFields.push(result.targetAudience);
+      }
+
+      if (result.countryOfOrigin && result.countryOfOrigin !== "Not visible") {
+        next.countryOfOrigin = prev.countryOfOrigin || result.countryOfOrigin;
+      }
+
+      if (result.warranty && result.warranty !== "Not specified") {
+        next.warranty = prev.warranty || result.warranty;
+      }
+
+      return next;
+    });
+
+    // Apply key features as chips (merge, max 6)
+    if (result.keyFeatures && result.keyFeatures.length > 0) {
+      setKeyFeatures((prev) => {
+        const merged = [...new Set([...prev, ...result.keyFeatures!])].slice(0, MAX_FEATURES);
+        return merged;
+      });
+      filledFields.push(`${result.keyFeatures.length} features`);
+    }
+
+    // Apply color from AI analysis (extract first color if it looks like a color)
+    if (result.color && result.color !== "Unknown") {
+      const colorParts = result.color.split(/[,&\/]/).map((c: string) => c.trim()).filter(Boolean);
+      setProductColors((prev) => {
+        const merged = [...new Set([...prev, ...colorParts])].slice(0, MAX_PRODUCT_COLORS);
+        return merged;
+      });
+      filledFields.push(result.color);
+    }
+
+    return filledFields;
   }
 
   function removeImage(id: string) {
     setImages((current) => {
       const imageToRemove = current.find((image) => image.id === id);
-
-      if (imageToRemove) {
-        URL.revokeObjectURL(imageToRemove.url);
-      }
-
+      if (imageToRemove) URL.revokeObjectURL(imageToRemove.url);
       return current.filter((image) => image.id !== id);
     });
   }
 
   function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
-    if (event.target.files) {
-      addFiles(event.target.files);
-    }
-
+    if (event.target.files) addFiles(event.target.files);
     event.target.value = "";
   }
 
@@ -411,144 +854,376 @@ export default function StudioPage() {
   function handleLogoChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     event.target.value = "";
-
-    if (!file || !file.type.startsWith("image/")) {
-      return;
-    }
-
+    if (!file || !file.type.startsWith("image/")) return;
     setLogo((current) => {
-      if (current) {
-        URL.revokeObjectURL(current.url);
-      }
-
-      return {
-        id: createImageId(file, 0),
-        name: file.name,
-        size: formatBytes(file.size),
-        url: URL.createObjectURL(file),
-        file
-      };
+      if (current) URL.revokeObjectURL(current.url);
+      return { id: createImageId(file, 0), name: file.name, size: formatBytes(file.size), url: URL.createObjectURL(file), file };
     });
   }
 
   function removeLogo() {
     setLogo((current) => {
-      if (current) {
-        URL.revokeObjectURL(current.url);
-      }
+      if (current) URL.revokeObjectURL(current.url);
       return null;
     });
   }
 
   function resetBrief() {
+    if (analyzeTimerRef.current) clearTimeout(analyzeTimerRef.current);
     imagesRef.current.forEach((image) => URL.revokeObjectURL(image.url));
     imagesRef.current = [];
     setImages([]);
-    if (logo) {
-      URL.revokeObjectURL(logo.url);
-    }
+    if (logo) URL.revokeObjectURL(logo.url);
     setLogo(null);
     setBrief(initialBrief);
     setMarketplaces([]);
-    setImageTypes([IMAGE_TYPES[0]]);
+    setSelectedBasicTypes([]);
+    setSelectedAplusTypes([]);
     setKeyFeatures([]);
     setProductColors([]);
     setBrandColors([]);
     setStatusMessage("");
+    setListings(null);
+    setShowListingPanel(false);
+    setNotifications([]);
   }
 
-  const validationIssue = useMemo(() => {
-    if (images.length === 0) {
-      return "Add at least one product photo.";
-    }
-    if (!brief.productName.trim()) {
-      return "Add a product name.";
-    }
-    if (!brief.category.trim()) {
-      return "Add a product category.";
-    }
-    if (marketplaces.length === 0) {
-      return "Select at least one marketplace.";
-    }
-    return null;
-  }, [brief.category, brief.productName, images.length, marketplaces.length]);
-
-  const briefSummary = useMemo(() => {
-    const items = [
-      `${images.length} photo${images.length === 1 ? "" : "s"}`,
-      brief.productName || "Product name pending",
-      brief.category || "Category pending"
-    ];
-
-    if (marketplaces.length > 0) {
-      items.push(marketplaces.join(", "));
-    }
-
-    items.push(
-      brief.background === "Custom Color" ? `Custom ${brief.customBackgroundColor}` : brief.background
-    );
-
-    if (imageTypes.length > 0) {
-      items.push(`${imageTypes.length} image type${imageTypes.length === 1 ? "" : "s"}`);
-    }
-
-    items.push(brief.aiStyle);
-    items.push(`${brief.imageFormat} · ${brief.resolution}`);
-
-    return items;
-  }, [
-    brief.aiStyle,
-    brief.background,
-    brief.category,
-    brief.customBackgroundColor,
-    brief.imageFormat,
-    brief.productName,
-    brief.resolution,
-    imageTypes.length,
-    images.length,
-    marketplaces
-  ]);
-
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  // ── Image Generation ───────────────────────────────────────────────────────────
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (validationIssue) {
-      setStatusMessage(validationIssue);
-      if (images.length === 0) {
-        fileInputRef.current?.focus();
-      }
+    if (images.length === 0) { setStatusMessage("Add at least one product photo."); fileInputRef.current?.focus(); return; }
+    if (!brief.productName.trim()) { setStatusMessage("Add a product name."); return; }
+    if (!brief.category.trim()) { setStatusMessage("Add a product category."); return; }
+    if (marketplaces.length === 0) { setStatusMessage("Select at least one marketplace."); return; }
+
+    // Check credits before generating
+    if (!canAfford) {
+      setStatusMessage(`Insufficient credits. Need $${selectedCost.total.toFixed(2)} but have $${creditBalance.toFixed(2)}.`);
       return;
     }
 
-    setStatusMessage(
-      `Brief ready — ${images.length} photo${images.length === 1 ? "" : "s"} for ${marketplaces.join(", ")}.`
-    );
+    setIsGenerating(true);
+    setGeneratedImages([]);
+    const imageTypes = [...selectedBasicTypes, ...selectedAplusTypes];
+    setStatusMessage(`Generating ${imageTypes.length} image${imageTypes.length === 1 ? "" : "s"}...`);
+    const payload = { ...brief, marketplaces, imageTypes, keyFeatures, productColors, brandColors };
+    const formData = new FormData();
+    formData.set("brief", JSON.stringify(payload));
+    images.forEach((image) => formData.append("photos", image.file));
+
+    try {
+      const response = await fetch("/api/generate", { method: "POST", body: formData });
+      const result = await response.json();
+
+      // Handle insufficient credits (402)
+      if (response.status === 402) {
+        loadCredits();
+        setStatusMessage(result.error || "Insufficient credits.");
+        return;
+      }
+
+      if (!response.ok) throw new Error(result.error || "Image generation failed.");
+
+      const newImages = (result.images || []) as GeneratedImageResult[];
+      setGeneratedImages(newImages);
+
+      // Update credit display with new balance from server
+      if (typeof result.newBalance === "number") {
+        setCreditBalance(result.newBalance);
+      }
+
+      setStatusMessage(
+        `Done — ${newImages.length} image${newImages.length === 1 ? "" : "s"} generated.`
+      );
+      handleGenerationSuccess(newImages, result.id);
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : "Image generation failed.");
+    } finally {
+      setIsGenerating(false);
+    }
   }
 
+  // ── Listing Generation ───────────────────────────────────────────────────────
+  async function handleGenerateListing() {
+    if (!brief.productName.trim()) { setStatusMessage("Product name is required."); return; }
+    setIsGeneratingListing(true);
+    setStatusMessage("Generating listings for all marketplaces...");
+    const payload = { ...brief, marketplaces, keyFeatures, productColors };
+
+    try {
+      const response = await fetch("/api/listing", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ brief: payload })
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Listing generation failed.");
+      setListings(result);
+      setShowListingPanel(true);
+      setStatusMessage("");
+      addNotification({ type: "success", message: "✓ Listings generated for all marketplaces!" });
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : "Listing generation failed.");
+    } finally {
+      setIsGeneratingListing(false);
+    }
+  }
+
+  function getImageAspectRatio(image: GeneratedImageResult): string {
+    const t = image.type;
+    if (t === "Main Product (White Background)") return "1 / 1";
+    if (t === "Front/Side Angle") return "3 / 2";
+    if (t === "Key Features Infographic") return "1 / 1";
+    if (t === "Dimensions") return "3 / 2";
+    if (t === "Product in Use (Lifestyle)") return "3 / 2";
+    if (t === "Close-up / Material Quality") return "1 / 1";
+    if (t === "What's in the Box") return "3 / 2";
+    if (t === "Comparison / Benefits") return "3 / 2";
+    if (t === "Brand Story / Warranty") return "2 / 3";
+    if (t === "Standard Banner") return "970 / 300";
+    if (t === "Banner with Text Overlay") return "970 / 300";
+    if (t === "Standard Image & Text") return "1 / 1";
+    if (t === "Three Image Module") return "1464 / 400";
+    if (t === "Four Image Module") return "1464 / 800";
+    if (t === "Hero Listing Image") return "1500 / 1000";
+    if (t === "A+ Lifestyle Banner") return "1464 / 600";
+    if (t === "A+ Product Photo") return "1 / 1";
+    return "1 / 1";
+  }
+
+  function getImageFilename(image: GeneratedImageResult) {
+    const isAplus = image.type.includes("A+");
+    const size = (brief.customWidth && brief.customHeight)
+      ? `${brief.customWidth}x${brief.customHeight}`
+      : brief.resolution === "4K" ? "2048x2048" : brief.resolution === "HD" ? "1280x1280" : "1024x1024";
+    const sizeSuffix = isAplus ? `-${size}` : "";
+    return `${image.type.toLowerCase().replace(/[^a-z0-9]+/g, "-")}${sizeSuffix}.${image.mimeType.split("/")[1] || "png"}`;
+  }
+
+  async function downloadImage(image: GeneratedImageResult) {
+    let blob: Blob;
+    if (image.data) {
+      const binaryString = atob(image.data);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      blob = new Blob([bytes], { type: image.mimeType });
+    } else if (image.url) {
+      const res = await fetch(image.url);
+      if (!res.ok) { setStatusMessage("Download failed."); return; }
+      blob = await res.blob();
+    } else {
+      return;
+    }
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = getImageFilename(image);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
+
+  async function downloadAllAsZip() {
+    if (generatedImages.length === 0) return;
+    setStatusMessage(`Zipping ${generatedImages.length} images...`);
+    const zip = new JSZip();
+    const folder = zip.folder("generated-images");
+    if (!folder) return;
+
+    for (const image of generatedImages) {
+      let bytes: Uint8Array;
+      if (image.data) {
+        const binaryString = atob(image.data);
+        bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+      } else if (image.url) {
+        const res = await fetch(image.url);
+        if (!res.ok) continue;
+        const ab = await res.arrayBuffer();
+        bytes = new Uint8Array(ab);
+      } else {
+        continue;
+      }
+      folder.file(getImageFilename(image), bytes);
+    }
+
+    const blob = await zip.generateAsync({ type: "blob" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `images-${(brief.productName || "product").toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${Date.now()}.zip`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    setStatusMessage("");
+  }
+
+  const validationIssue = (() => {
+    if (images.length === 0) return "Add at least one product photo.";
+    if (!brief.productName.trim()) return "Add a product name.";
+    if (!brief.category.trim()) return "Add a product category.";
+    if (marketplaces.length === 0) return "Select at least one marketplace.";
+    if (selectedBasicTypes.length === 0 && selectedAplusTypes.length === 0) {
+      return "Select at least one image type below.";
+    }
+    return null;
+  })();
+
+  const briefSummary = [
+    `${images.length} photo${images.length === 1 ? "" : "s"}`,
+    brief.productName || "Product name pending",
+    brief.category || "Category pending",
+    ...(marketplaces.length > 0 ? [marketplaces.join(", ")] : []),
+    brief.background === "Custom Color" ? `Custom ${brief.customBackgroundColor}` : brief.background,
+    brief.aiStyle,
+    `${brief.imageFormat} · ${brief.resolution}`
+  ];
+
   return (
-    <main className="studioPage">
+    <main className={`studioPage${showHistory ? " historyOpen" : ""}`} suppressHydrationWarning>
+      {/* ── Notification Toasts ── */}
+      <div className="toastContainer" aria-live="polite" aria-atomic="true">
+        {notifications.map((n) => (
+          <NotificationToast key={n.id} notification={n} onDismiss={() => dismissNotification(n.id)} />
+        ))}
+      </div>
+
+      {/* ── Photo analysis overlay ── */}
+      {isAnalyzing && (
+        <div className="analyzeOverlay" role="status" aria-live="polite" aria-label="Analyzing photos">
+          <div className="analyzeOverlayCard">
+            <span className="analyzeOverlaySpinner" aria-hidden="true" />
+            <strong>Analyzing your photos…</strong>
+            <p>Our AI is reading product details, colors, and features to auto-fill your brief.</p>
+          </div>
+        </div>
+      )}
+
+      {/* ── History Sidebar ── */}
+      {showHistory && (
+        <>
+          <div className="historyBackdrop" onClick={() => setShowHistory(false)} />
+          <aside className="historySidebar" aria-label="Generation history">
+            <div className="historySidebarHead">
+              <h2>Your Generations</h2>
+              <button className="ghostButton compactButton" type="button" onClick={() => setShowHistory(false)} aria-label="Close history">✕</button>
+            </div>
+
+            {historyLoading ? (
+              <div className="historyEmpty">
+                <span className="spinner" />
+                <p>Loading...</p>
+              </div>
+            ) : historyItems.length === 0 ? (
+              <div className="historyEmpty">
+                <p>No generations yet.</p>
+                <small>Create your first set of images above.</small>
+              </div>
+            ) : (
+              <ul className="historyList" role="list">
+                {historyItems.map((item) => (
+                  <li key={item.id}>
+                    <button
+                      className={`historyItem${activeHistoryId === item.id ? " isLoading" : ""}`}
+                      type="button"
+                      onClick={() => loadHistoryItem(item.id)}
+                      disabled={!!activeHistoryId}
+                    >
+                      <div className="historyThumb">
+                        {item.thumbnail ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={item.thumbnail}
+                            alt={item.productName}
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="historyThumbPlaceholder">🖼</div>
+                        )}
+                        <span className="historyCount">{item.imageCount}</span>
+                      </div>
+                      <div className="historyMeta">
+                        <strong>{item.productName || "Untitled"}</strong>
+                        <span>{item.category || "General"}</span>
+                        {item.marketplaces?.length > 0 && (
+                          <span className="historyMarketplaces">{item.marketplaces.join(", ")}</span>
+                        )}
+                        <time className="historyTime">{formatHistoryTime(item.createdAt)}</time>
+                      </div>
+                      {activeHistoryId === item.id && <span className="spinner" />}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </aside>
+        </>
+      )}
+
       <header className="studioTopBar">
         <Link className="studioBrand" href="/">
-          <span className="brandMark" aria-hidden="true">
-            AI
-          </span>
-          <span>
-            <strong>AI Product Image Studio</strong>
-            <small>Marketplace visuals from product photos</small>
-          </span>
+          <span className="brandMark" aria-hidden="true">AI</span>
+          <span><strong>Product Studio</strong><small>AI image generation</small></span>
         </Link>
-
-        <nav className="studioNav" aria-label="Studio navigation">
-          <Link href="/">Home</Link>
-          <a href="#photos">Photos</a>
-          <a href="#details">Details</a>
-          <a href="#brief">Brief</a>
-        </nav>
-
         <div className="studioTopActions">
-          <span className="topPhotoCount">
-            {images.length}/{MAX_PHOTOS} photos
-          </span>
+          <button
+            className={`historyToggleBtn${showHistory ? " isActive" : ""}`}
+            type="button"
+            onClick={() => { setShowHistory((v) => !v); if (!showHistory) loadHistory(); }}
+            title="Generation history"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+            </svg>
+            History
+          </button>
+          <div className="userMenu">
+            <button className="userAvatar" type="button" onClick={() => setShowUserMenu((v) => !v)} title="Account">
+              <span>{session?.user?.name?.[0]?.toUpperCase() || session?.user?.email?.[0]?.toUpperCase() || "U"}</span>
+            </button>
+            {showUserMenu && (
+              <>
+                <div className="userMenuBackdrop" onClick={() => setShowUserMenu(false)} />
+                <div className="userMenuDropdown">
+                  <div className="userMenuHeader">
+                    <div className="userMenuName">{session?.user?.name || "User"}</div>
+                    <div className="userMenuEmail">{session?.user?.email}</div>
+                  </div>
+                  <div className="userMenuCredits">
+                    <span className="userMenuCreditsLabel">Credit balance</span>
+                    <span className="userMenuCreditsAmount">${creditBalance.toFixed(2)}</span>
+                    <button className="userMenuCreditsRefresh" type="button" onClick={(e) => { e.stopPropagation(); loadCredits(); }}>↻</button>
+                  </div>
+                  <div className="userMenuDivider" />
+                  <Link href="/credits" className="userMenuItemLink" onClick={() => setShowUserMenu(false)}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+                    Buy Credits
+                  </Link>
+                  <div className="userMenuDivider" />
+                  <button className="userMenuItem" type="button" onClick={() => { setShowUserMenu(false); loadHistory(); setShowHistory(true); }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    Generation History
+                  </button>
+                  <button className="userMenuItem" type="button" onClick={() => { setShowUserMenu(false); }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                    Settings
+                  </button>
+                  <div className="userMenuDivider" />
+                  <button className="userMenuItem userMenuSignout" type="button" onClick={() => signOut({ redirectTo: "/" })}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                    Sign out
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </header>
 
@@ -557,38 +1232,19 @@ export default function StudioPage() {
           <div className="formSectionHead">
             <p className="eyebrow">Upload</p>
             <h1 id="upload-title">Product photos</h1>
-            <p className="sectionDesc">
-              Front, side, back, and detail shots. <span className="requiredMark">*</span> at least 1 required, 2–4 recommended.
-            </p>
+            <p className="sectionDesc">Front, side, back, and detail shots. Photos are auto-analyzed by AI after upload.</p>
           </div>
 
-          <div
-            className={`dropZone${isDragging ? " isDragging" : ""}`}
+          <div className={`dropZone${isDragging ? " isDragging" : ""}`}
             onDragEnter={() => setIsDragging(true)}
             onDragLeave={() => setIsDragging(false)}
             onDragOver={(event) => event.preventDefault()}
-            onDrop={handleDrop}
-          >
-            <input
-              ref={fileInputRef}
-              className="fileInput"
-              type="file"
-              accept="image/*"
-              multiple
-              onChange={handleFileChange}
-            />
-            <span className="uploadIcon" aria-hidden="true">
-              +
-            </span>
+            onDrop={handleDrop}>
+            <input ref={fileInputRef} className="fileInput" type="file" accept="image/*" multiple onChange={handleFileChange} />
+            <span className="uploadIcon" aria-hidden="true">+</span>
             <strong>Drop product photos</strong>
             <small>PNG, JPG, or WEBP. Up to {MAX_PHOTOS} images.</small>
-            <button
-              className="secondaryButton compactButton"
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              Choose photos
-            </button>
+            <button className="secondaryButton compactButton" type="button" onClick={() => fileInputRef.current?.click()}>Choose photos</button>
           </div>
 
           {images.length > 0 ? (
@@ -598,26 +1254,15 @@ export default function StudioPage() {
                   <div className="previewImage">
                     <Image src={image.url} alt={`Preview of ${image.name}`} fill sizes="160px" unoptimized />
                   </div>
-                  <div className="previewMeta">
-                    <strong>{image.name}</strong>
-                    <span>{image.size}</span>
-                  </div>
-                  <button
-                    className="removeButton"
-                    type="button"
-                    onClick={() => removeImage(image.id)}
-                    aria-label={`Remove ${image.name}`}
-                  >
-                    &times;
-                  </button>
+                  <div className="previewMeta"><strong>{image.name}</strong><span>{image.size}</span></div>
+                  <button className="removeButton" type="button" onClick={() => removeImage(image.id)}
+                    aria-label={`Remove ${image.name}`}>&times;</button>
                 </article>
               ))}
             </div>
           ) : (
             <div className="emptyPreview" aria-hidden="true">
-              {["Front", "Side", "Detail", "Scale"].map((slot) => (
-                <span key={slot}>{slot}</span>
-              ))}
+              {["Front", "Side", "Detail", "Scale"].map((slot) => <span key={slot}>{slot}</span>)}
             </div>
           )}
 
@@ -634,31 +1279,14 @@ export default function StudioPage() {
               <div className="previewImage logoPreviewImage">
                 <Image src={logo.url} alt={`Preview of ${logo.name}`} fill sizes="72px" unoptimized />
               </div>
-              <div className="previewMeta">
-                <strong>{logo.name}</strong>
-                <span>{logo.size}</span>
-              </div>
-              <button className="ghostButton compactButton" type="button" onClick={removeLogo}>
-                Remove
-              </button>
+              <div className="previewMeta"><strong>{logo.name}</strong><span>{logo.size}</span></div>
+              <button className="ghostButton compactButton" type="button" onClick={removeLogo}>Remove</button>
             </div>
           ) : (
             <div className="dropZone compactDrop">
-              <input
-                ref={logoInputRef}
-                className="fileInput"
-                type="file"
-                accept="image/*"
-                onChange={handleLogoChange}
-              />
+              <input ref={logoInputRef} className="fileInput" type="file" accept="image/*" onChange={handleLogoChange} />
               <small>No logo uploaded</small>
-              <button
-                className="secondaryButton compactButton"
-                type="button"
-                onClick={() => logoInputRef.current?.click()}
-              >
-                Upload logo
-              </button>
+              <button className="secondaryButton compactButton" type="button" onClick={() => logoInputRef.current?.click()}>Upload logo</button>
             </div>
           )}
         </section>
@@ -670,203 +1298,177 @@ export default function StudioPage() {
               <h2 id="details-title">Build the image brief</h2>
               <p>Add product, marketplace, style, and output details for the final image set.</p>
             </div>
-            <button className="ghostButton" type="button" onClick={resetBrief}>
-              Reset
-            </button>
+            <button className="ghostButton" type="button" onClick={resetBrief}>Reset</button>
           </div>
 
           <FormSection eyebrow="Required" title="Product basics">
             <div className="formGrid">
-              <label>
-                <span>
-                  Product name <span className="requiredMark">*</span>
-                </span>
-                <input
-                  type="text"
-                  value={brief.productName}
-                  onChange={(event) => updateBrief("productName", event.target.value)}
-                  placeholder="Wireless desk lamp"
-                />
+              <label><span>Product name <span className="requiredMark">*</span></span>
+                <input type="text" value={brief.productName} onChange={(e) => updateBrief("productName", e.target.value)} placeholder="Wireless desk lamp" />
               </label>
-
-              <label>
-                <span>
-                  Category <span className="requiredMark">*</span>
-                </span>
-                <input
-                  type="text"
-                  list="category-suggestions"
-                  value={brief.category}
-                  onChange={(event) => updateBrief("category", event.target.value)}
-                  placeholder="Electronics, Clothing, Furniture..."
-                />
+              <label><span>Category <span className="requiredMark">*</span></span>
+                <input type="text" list="category-suggestions" value={brief.category}
+                  onChange={(e) => updateBrief("category", e.target.value)} placeholder="Electronics, Clothing, Furniture..." />
                 <datalist id="category-suggestions">
-                  {CATEGORY_SUGGESTIONS.map((category) => (
-                    <option value={category} key={category} />
-                  ))}
+                  {CATEGORY_SUGGESTIONS.map((cat) => <option value={cat} key={cat} />)}
                 </datalist>
               </label>
-
-              <label>
-                <span>Brand name</span>
-                <input
-                  type="text"
-                  value={brief.brandName}
-                  onChange={(event) => updateBrief("brandName", event.target.value)}
-                  placeholder="Optional if unbranded"
-                />
+              <label><span>Brand name</span>
+                <input type="text" value={brief.brandName} onChange={(e) => updateBrief("brandName", e.target.value)} placeholder="Optional if unbranded" />
               </label>
-
-              <label>
-                <span>SKU</span>
-                <input
-                  type="text"
-                  value={brief.sku}
-                  onChange={(event) => updateBrief("sku", event.target.value)}
-                  placeholder="Optional"
-                />
+              <label><span>SKU</span>
+                <input type="text" value={brief.sku} onChange={(e) => updateBrief("sku", e.target.value)} placeholder="Optional" />
               </label>
             </div>
           </FormSection>
 
           <FormSection eyebrow="Required" title="Marketplace & background">
-            <CheckGrid
-              legend={
-                <>
-                  Marketplace(s) <span className="requiredMark">*</span>
-                </>
-              }
-              options={MARKETPLACES}
-              values={marketplaces}
-              onToggle={(value) => setMarketplaces((current) => toggleValue(current, value))}
-              columns={4}
-            />
-
+            <CheckGrid legend={<><span className="requiredMark">*</span> Marketplace(s)</>}
+              options={MARKETPLACES} values={marketplaces}
+              onToggle={(value) => setMarketplaces((current) => toggleValue(current, value))} columns={4} />
             {marketplaces.includes("Custom") ? (
-              <label className="inlineField">
-                <span>Custom marketplace</span>
-                <input
-                  type="text"
-                  value={brief.customMarketplace}
-                  onChange={(event) => updateBrief("customMarketplace", event.target.value)}
-                  placeholder="Name your marketplace"
-                />
+              <label className="inlineField"><span>Custom marketplace</span>
+                <input type="text" value={brief.customMarketplace} onChange={(e) => updateBrief("customMarketplace", e.target.value)}
+                  placeholder="Name your marketplace" />
               </label>
             ) : null}
-
-            <PillGroup
-              legend="Background preference"
-              options={BACKGROUND_OPTIONS}
-              value={brief.background}
-              onChange={(value) => updateBrief("background", value)}
-            />
-
+            <PillGroup legend="Background preference" options={BACKGROUND_OPTIONS}
+              value={brief.background} onChange={(value) => updateBrief("background", value)} />
             {brief.background === "Custom Color" ? (
-              <label className="inlineField colorField">
-                <span>Custom background color</span>
+              <label className="inlineField colorField"><span>Custom background color</span>
                 <div className="colorFieldRow">
-                  <input
-                    className="colorPicker"
-                    type="color"
-                    value={brief.customBackgroundColor}
-                    onChange={(event) => updateBrief("customBackgroundColor", event.target.value)}
-                  />
-                  <input
-                    type="text"
-                    value={brief.customBackgroundColor}
-                    onChange={(event) => updateBrief("customBackgroundColor", event.target.value)}
-                  />
+                  <input className="colorPicker" type="color" value={brief.customBackgroundColor}
+                    onChange={(e) => updateBrief("customBackgroundColor", e.target.value)} />
+                  <input type="text" value={brief.customBackgroundColor}
+                    onChange={(e) => updateBrief("customBackgroundColor", e.target.value)} />
                 </div>
               </label>
             ) : null}
           </FormSection>
 
           <FormSection eyebrow="Product details" title="Features, color & specs">
-            <ChipInput
-              legend="Key features"
-              hint={`Add ${MIN_FEATURES}–${MAX_FEATURES} points, e.g. Waterproof, Fast Charging, Lightweight.`}
-              values={keyFeatures}
-              onAdd={(value) => setKeyFeatures((current) => [...current, value])}
+            <ChipInput legend="Key features" hint={`Add ${MIN_FEATURES}–${MAX_FEATURES} points.`}
+              values={keyFeatures} onAdd={(value) => setKeyFeatures((current) => [...current, value])}
               onRemove={(value) => setKeyFeatures((current) => current.filter((item) => item !== value))}
-              placeholder="Type a feature and press Enter"
-              max={MAX_FEATURES}
-            />
-
-            <ChipInput
-              legend="Product color(s)"
-              values={productColors}
+              placeholder="Type a feature and press Enter" max={MAX_FEATURES} />
+            <ChipInput legend="Product color(s)" values={productColors}
               onAdd={(value) => setProductColors((current) => [...current, value])}
               onRemove={(value) => setProductColors((current) => current.filter((item) => item !== value))}
-              placeholder="Type a color and press Enter"
-              max={MAX_PRODUCT_COLORS}
-              withColorPicker
-            />
-
+              placeholder="Type a color and press Enter" max={MAX_PRODUCT_COLORS} withColorPicker />
             <div className="formGrid">
-              <label>
-                <span>Material</span>
-                <input
-                  type="text"
-                  value={brief.material}
-                  onChange={(event) => updateBrief("material", event.target.value)}
-                  placeholder="Optional"
-                />
+              <label><span>Material</span>
+                <input type="text" value={brief.material} onChange={(e) => updateBrief("material", e.target.value)} placeholder="Optional" />
               </label>
-
-              <label>
-                <span>Dimensions</span>
-                <input
-                  type="text"
-                  value={brief.dimensions}
-                  onChange={(event) => updateBrief("dimensions", event.target.value)}
-                  placeholder="Optional"
-                />
+              <label><span>Dimensions</span>
+                <input type="text" value={brief.dimensions} onChange={(e) => updateBrief("dimensions", e.target.value)} placeholder="Optional" />
               </label>
-
-              <label>
-                <span>Weight</span>
-                <input
-                  type="text"
-                  value={brief.weight}
-                  onChange={(event) => updateBrief("weight", event.target.value)}
-                  placeholder="Optional"
-                />
+              <label><span>Weight</span>
+                <input type="text" value={brief.weight} onChange={(e) => updateBrief("weight", e.target.value)} placeholder="Optional" />
               </label>
             </div>
           </FormSection>
 
           <FormSection eyebrow="Branding" title="Brand look & feel">
-            <ChipInput
-              legend="Brand colors"
-              values={brandColors}
+            <ChipInput legend="Brand colors" values={brandColors}
               onAdd={(value) => setBrandColors((current) => [...current, value])}
               onRemove={(value) => setBrandColors((current) => current.filter((item) => item !== value))}
-              placeholder="Pick or type a hex color"
-              max={MAX_BRAND_COLORS}
-              withColorPicker
-            />
-
-            <PillGroup
-              legend="Preferred font style"
-              options={FONT_STYLES}
-              value={brief.fontStyle}
-              onChange={(value) => updateBrief("fontStyle", value)}
-            />
+              placeholder="Pick or type a hex color" max={MAX_BRAND_COLORS} withColorPicker />
+            <PillGroup legend="Preferred font style" options={FONT_STYLES}
+              value={brief.fontStyle} onChange={(value) => updateBrief("fontStyle", value)} />
           </FormSection>
 
-          <FormSection eyebrow="Image style" title="Choose image types">
-            <CheckGrid legend="Image types" options={IMAGE_TYPES} values={imageTypes} onToggle={(value) => setImageTypes((current) => toggleValue(current, value))} columns={2} />
+          {/* Basic Images */}
+          <FormSection eyebrow="Basic Images" title="Select basic images">
+            <div className="imageTypeSectionHeader">
+              <span className="imageTypeBadge basic">Basic</span>
+              <span className="imageTypePrice">$0.15 per image · nano-banana AI</span>
+            </div>
+            <CheckGrid legend="Basic image types" options={BASIC_IMAGE_TYPES} values={selectedBasicTypes}
+              onToggle={(value) => {
+                setSelectedBasicTypes((prev) => toggleValue(prev, value));
+              }} columns={2} />
+          </FormSection>
+
+          {/* A+ Listing Images */}
+          <FormSection eyebrow="A+ Listing Images" title="Premium A+ images">
+            <div className="imageTypeSectionHeader">
+              <span className="imageTypeBadge aplus">A+ Premium</span>
+              <span className="imageTypePrice">$0.90 per image · GPT Image 2 AI</span>
+            </div>
+            <div className="aplusImageOptions">
+              {APLUS_IMAGE_TYPES.map((type) => (
+                <label key={type.id} className={`aplusImageOption${selectedAplusTypes.includes(type.id) ? " isSelected" : ""}`}>
+                  <input
+                    type="checkbox"
+                    checked={selectedAplusTypes.includes(type.id)}
+                    onChange={() => setSelectedAplusTypes((prev) => toggleValue(prev, type.id))}
+                  />
+                  <div className="aplusImageOptionContent">
+                    <span className="aplusImageOptionLabel">{type.label}</span>
+                    <span className="aplusImageOptionHint">{type.hint}</span>
+                  </div>
+                  <div className="aplusImageOptionCheck" aria-hidden="true">
+                    {selectedAplusTypes.includes(type.id) ? "✓" : ""}
+                  </div>
+                </label>
+              ))}
+            </div>
           </FormSection>
 
           <FormSection eyebrow="AI preferences" title="Style, text & language">
-            <PillGroup legend="Image style" options={AI_IMAGE_STYLES} value={brief.aiStyle} onChange={(value) => updateBrief("aiStyle", value)} />
-            <PillGroup legend="Text on image" options={TEXT_ON_IMAGE_OPTIONS} value={brief.textOnImage} onChange={(value) => updateBrief("textOnImage", value)} />
-            <PillGroup legend="Language" options={LANGUAGE_OPTIONS} value={brief.language} onChange={(value) => updateBrief("language", value)} />
+            <PillGroup legend="Image style" options={AI_IMAGE_STYLES} value={brief.aiStyle}
+              onChange={(value) => updateBrief("aiStyle", value)} />
+            <PillGroup legend="Text on image" options={TEXT_ON_IMAGE_OPTIONS} value={brief.textOnImage}
+              onChange={(value) => updateBrief("textOnImage", value)} />
+            <PillGroup legend="Language" options={LANGUAGE_OPTIONS} value={brief.language}
+              onChange={(value) => updateBrief("language", value)} />
           </FormSection>
 
-          <FormSection eyebrow="Output" title="Format & resolution">
-            <PillGroup legend="Image format" options={IMAGE_FORMATS} value={brief.imageFormat} onChange={(value) => updateBrief("imageFormat", value)} />
-            <PillGroup legend="Resolution" options={RESOLUTIONS} value={brief.resolution} onChange={(value) => updateBrief("resolution", value)} />
+          <FormSection eyebrow="Output" title="Quantity, size & format">
+            <div className="formGrid">
+              <label><span>Number of variant sets</span>
+                <input type="number" min="1" max="10" value={brief.variantSets}
+                  onChange={(e) => updateBrief("variantSets", e.target.value)} placeholder="1" />
+              </label>
+              <label><span>Quantity per set (pieces shown in-frame)</span>
+                <input type="number" min="1" max="12" value={brief.quantityPerSet}
+                  onChange={(e) => updateBrief("quantityPerSet", e.target.value)} placeholder="e.g. 2 for a pair" />
+              </label>
+              <label><span>Image format</span>
+                <select value={brief.imageFormat}
+                  onChange={(e) => updateBrief("imageFormat", e.target.value)}
+                  style={{ minHeight: "42px", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", background: "var(--bg)", color: "var(--ink)", padding: "0 0.75rem", fontSize: "0.85rem", fontWeight: "500", outline: "none", cursor: "pointer", width: "100%" }}>
+                  {IMAGE_FORMATS.map((f) => <option key={f} value={f}>{f}</option>)}
+                </select>
+              </label>
+            </div>
+
+            <details className="optionalSection" style={{ border: "none", padding: "0", margin: "0" }}>
+              <summary>
+                <span>Basic image size (optional)</span>
+                <span className="summaryChevron" aria-hidden="true" />
+              </summary>
+              <div className="optionalContent" style={{ paddingTop: "0.75rem" }}>
+                <div className="formGrid" style={{ gridTemplateColumns: "1fr 1fr 1fr" }}>
+                  <label><span>Preset</span>
+                    <select value={brief.resolution}
+                      onChange={(e) => updateBrief("resolution", e.target.value)}
+                      style={{ minHeight: "42px", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", background: "var(--bg)", color: "var(--ink)", padding: "0 0.75rem", fontSize: "0.85rem", fontWeight: "500", outline: "none", cursor: "pointer", width: "100%" }}>
+                        {RESOLUTIONS.map((r) => <option key={r} value={r}>{r} ({r === "Standard" ? "1024×1024" : r === "HD" ? "1280×1280" : "2048×2048"})</option>)}
+                    </select>
+                  </label>
+                  <label><span>Width (px)</span>
+                    <input type="number" min="128" max="4096" value={brief.customWidth}
+                      onChange={(e) => updateBrief("customWidth", e.target.value)} placeholder="1024" />
+                  </label>
+                  <label><span>Height (px)</span>
+                    <input type="number" min="128" max="4096" value={brief.customHeight}
+                      onChange={(e) => updateBrief("customHeight", e.target.value)} placeholder="1024" />
+                  </label>
+                </div>
+                <p className="fieldHint">Only applies to basic images. A+ images use fixed sizes.</p>
+              </div>
+            </details>
           </FormSection>
 
           <details className="formSection optionalSection">
@@ -874,144 +1476,96 @@ export default function StudioPage() {
               <span>Optional listing details</span>
               <span className="summaryChevron" aria-hidden="true" />
             </summary>
-
             <div className="optionalContent">
-              <label className="promptField">
-                <span>Product description</span>
-                <textarea
-                  value={brief.description}
-                  onChange={(event) => updateBrief("description", event.target.value)}
-                  placeholder="A short description buyers will see on the listing."
-                  rows={3}
-                />
+              <label className="promptField"><span>Product description</span>
+                <textarea value={brief.description} onChange={(e) => updateBrief("description", e.target.value)}
+                  placeholder="A short description buyers will see on the listing." rows={3} />
               </label>
-
               <div className="formGrid">
-                <label>
-                  <span>Target audience</span>
-                  <input
-                    type="text"
-                    value={brief.targetAudience}
-                    onChange={(event) => updateBrief("targetAudience", event.target.value)}
-                    placeholder="Students, creators, home workers"
-                  />
+                <label><span>Target audience</span>
+                  <input type="text" value={brief.targetAudience} onChange={(e) => updateBrief("targetAudience", e.target.value)}
+                    placeholder="Students, creators, home workers" />
                 </label>
-
-                <label>
-                  <span>Selling price</span>
-                  <input
-                    type="text"
-                    value={brief.sellingPrice}
-                    onChange={(event) => updateBrief("sellingPrice", event.target.value)}
-                    placeholder="₹999"
-                  />
+                <label><span>Selling price</span>
+                  <input type="text" value={brief.sellingPrice} onChange={(e) => updateBrief("sellingPrice", e.target.value)}
+                    placeholder="₹999" />
                 </label>
-
-                <label>
-                  <span>MRP</span>
-                  <input
-                    type="text"
-                    value={brief.mrp}
-                    onChange={(event) => updateBrief("mrp", event.target.value)}
-                    placeholder="₹1,499"
-                  />
+                <label><span>MRP</span>
+                  <input type="text" value={brief.mrp} onChange={(e) => updateBrief("mrp", e.target.value)}
+                    placeholder="₹1,499" />
                 </label>
-
-                <label>
-                  <span>Discount %</span>
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={brief.discountPercent}
-                    onChange={(event) => updateBrief("discountPercent", event.target.value)}
-                    placeholder="33"
-                  />
+                <label><span>Discount %</span>
+                  <input type="number" min="0" max="100" value={brief.discountPercent}
+                    onChange={(e) => updateBrief("discountPercent", e.target.value)} placeholder="33" />
                 </label>
-
-                <label>
-                  <span>Special offers</span>
-                  <input
-                    type="text"
-                    value={brief.specialOffers}
-                    onChange={(event) => updateBrief("specialOffers", event.target.value)}
-                    placeholder="Buy 1 Get 1, Bank offer..."
-                  />
+                <label><span>Special offers</span>
+                  <input type="text" value={brief.specialOffers} onChange={(e) => updateBrief("specialOffers", e.target.value)}
+                    placeholder="Buy 1 Get 1, Bank offer..." />
                 </label>
-
-                <label>
-                  <span>Warranty</span>
-                  <input
-                    type="text"
-                    value={brief.warranty}
-                    onChange={(event) => updateBrief("warranty", event.target.value)}
-                    placeholder="1 year manufacturer warranty"
-                  />
+                <label><span>Warranty</span>
+                  <input type="text" value={brief.warranty} onChange={(e) => updateBrief("warranty", e.target.value)}
+                    placeholder="1 year manufacturer warranty" />
                 </label>
-
-                <label>
-                  <span>Country of origin</span>
-                  <input
-                    type="text"
-                    value={brief.countryOfOrigin}
-                    onChange={(event) => updateBrief("countryOfOrigin", event.target.value)}
-                    placeholder="India"
-                  />
+                <label><span>Country of origin</span>
+                  <input type="text" value={brief.countryOfOrigin} onChange={(e) => updateBrief("countryOfOrigin", e.target.value)}
+                    placeholder="India" />
                 </label>
               </div>
-
-              <label className="promptField">
-                <span>Package contents</span>
-                <textarea
-                  value={brief.packageContents}
-                  onChange={(event) => updateBrief("packageContents", event.target.value)}
-                  placeholder="1 x Product, 1 x USB-C cable, 1 x User manual"
-                  rows={2}
-                />
+              <label className="promptField"><span>Package contents</span>
+                <textarea value={brief.packageContents} onChange={(e) => updateBrief("packageContents", e.target.value)}
+                  placeholder="1 x Product, 1 x USB-C cable, 1 x User manual" rows={2} />
               </label>
-
-              <label className="promptField">
-                <span>Custom prompt</span>
-                <textarea
-                  value={brief.customPrompt}
-                  onChange={(event) => updateBrief("customPrompt", event.target.value)}
-                  placeholder="Keep the original color, add soft shadows, show premium packaging..."
-                  rows={4}
-                />
+              <label className="promptField"><span>Custom prompt</span>
+                <textarea value={brief.customPrompt} onChange={(e) => updateBrief("customPrompt", e.target.value)}
+                  placeholder="Keep the original color, add soft shadows, show premium packaging..." rows={4} />
               </label>
             </div>
           </details>
 
           <aside className="briefPanel" id="brief" aria-label="Current generation brief">
+            {/* Cost preview — shown when image types are selected */}
+            {(selectedCost.basic > 0 || selectedCost.aplus > 0) && (
+              <div className="briefCostRow">
+                <span className="briefCostLabel">
+                  {selectedCost.basic > 0 && `${selectedCost.basic} basic @ $${PRICING.basic.toFixed(2)}`}
+                  {selectedCost.basic > 0 && selectedCost.aplus > 0 && " · "}
+                  {selectedCost.aplus > 0 && `${selectedCost.aplus} A+ @ $${PRICING.aplus.toFixed(2)}`}
+                </span>
+                <span className={`briefCostTotal${canAfford ? "" : " isLow"}`}>
+                  ${selectedCost.total.toFixed(2)}
+                </span>
+              </div>
+            )}
+
             <div className="briefHeader">
               <h2>Ready brief</h2>
               <span>{marketplaces.length > 0 ? marketplaces.join(", ") : "No marketplace"}</span>
             </div>
-
             <div className="briefList">
-              {briefSummary.map((item) => (
-                <span key={item}>{item}</span>
-              ))}
+              {briefSummary.map((item) => <span key={item}>{item}</span>)}
             </div>
-
             {keyFeatures.length > 0 ? (
-              <div className="summaryNote">
-                <strong>Key features</strong>
-                <p>{keyFeatures.join(", ")}</p>
-              </div>
+              <div className="summaryNote"><strong>Key features</strong><p>{keyFeatures.join(", ")}</p></div>
             ) : null}
-
             {brief.customPrompt ? (
-              <div className="summaryNote">
-                <strong>Customization</strong>
-                <p>{brief.customPrompt}</p>
-              </div>
+              <div className="summaryNote"><strong>Customization</strong><p>{brief.customPrompt}</p></div>
             ) : null}
 
-            <button className="primaryButton fullButton" type="submit">
-              <span>Create image brief</span>
+            <button className="primaryButton fullButton" type="submit"
+              disabled={isGenerating || !!validationIssue || isAnalyzing || !canAfford || (selectedBasicTypes.length === 0 && selectedAplusTypes.length === 0)}>
+              <span>{isGenerating ? "Generating..." : !canAfford ? "Insufficient credits" : "Generate images"}</span>
               <span className="buttonIcon" aria-hidden="true">
-                +
+                {isGenerating ? <span className="spinner" /> : "+"}
+              </span>
+            </button>
+
+            <button className="secondaryButton fullButton" type="button"
+              onClick={handleGenerateListing}
+              disabled={isGeneratingListing || !brief.productName.trim() || isGenerating || isAnalyzing}
+              style={{ marginTop: "8px" }}>
+              {isGeneratingListing ? "Generating listings..." : "Generate Listing Text"}
+              <span className="buttonIcon" aria-hidden="true">
+                {isGeneratingListing ? <span className="spinner" /> : "📝"}
               </span>
             </button>
 
@@ -1019,6 +1573,143 @@ export default function StudioPage() {
           </aside>
         </section>
       </form>
+
+      {isGenerating || generatedImages.length > 0 ? (
+        <section className="resultsSection" id="results" ref={resultsRef} aria-label="Generated images">
+          <div className="resultsSectionHeader">
+            <div className="formSectionHead">
+              <p className="eyebrow">Output</p>
+              <h2>Generated images</h2>
+              <p className="sectionDesc">
+                {isGenerating
+                  ? "Creating your marketplace-ready images. This can take a minute for larger batches."
+                  : `${generatedImages.length} image${generatedImages.length === 1 ? "" : "s"} ready to download.`}
+              </p>
+            </div>
+            {generatedImages.length > 0 && !isGenerating && (
+              <button className="primaryButton" type="button" onClick={downloadAllAsZip}
+                style={{ flexShrink: 0, alignSelf: "flex-end" }}>
+                ⬇ Download ZIP
+              </button>
+            )}
+          </div>
+
+          {isGenerating ? (
+            <div className="resultsGrid">
+              {[...selectedBasicTypes, ...selectedAplusTypes].map((type) => (
+                <div className="resultsTile resultsTileLoading" key={type}>
+                  <div className="resultsSkeleton"><span className="spinner" /></div>
+                  <span className="resultsLabel">{type}</span>
+                </div>
+              ))}
+            </div>
+          ) : (() => {
+            const basicImages = generatedImages.filter((img) => !img.isAplus);
+            const aplusImages = generatedImages.filter((img) => img.isAplus);
+
+            function renderImageTile(image: GeneratedImageResult, index: number) {
+              return (
+                <div className="resultsTile" key={`${image.type}-${index}`}>
+                  <div className="resultsImage" style={{ aspectRatio: getImageAspectRatio(image) }}>
+                    <button
+                      type="button"
+                      className="resultsImageBtn"
+                      onClick={() => setLightboxImage(image)}
+                      aria-label={`View ${image.type} full size`}
+                    >
+                      {getImageSrc(image) ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={getImageSrc(image)}
+                          alt={image.type}
+                          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", borderRadius: "8px" }}
+                        />
+                      ) : (
+                        <div className="historyThumbPlaceholder" style={{ width: "100%", height: "100%" }}>🖼</div>
+                      )}
+                      <span className="resultsImageOverlay" aria-hidden="true">
+                        <span>🔍</span>
+                      </span>
+                    </button>
+                  </div>
+                  <div className="resultsTileFooter">
+                    <span className="resultsLabel">{image.type}</span>
+                    <button type="button" className="ghostButton compactButton" onClick={() => downloadImage(image)}>Download</button>
+                  </div>
+                </div>
+              );
+            }
+
+            return (
+              <>
+                {basicImages.length > 0 && (
+                  <>
+                    <div className="resultsSectionSubhead">
+                      <span>Basic Images</span>
+                      <span className="resultsSubCost">${(basicImages.length * PRICING.basic).toFixed(2)}</span>
+                    </div>
+                    <div className="resultsGrid">
+                      {basicImages.map((img, i) => renderImageTile(img, i))}
+                    </div>
+                  </>
+                )}
+                {aplusImages.length > 0 && (
+                  <>
+                    <div className="resultsSectionSubhead aplusSubhead">
+                      <span>A+ Listing Images (GPT Image 2)</span>
+                      <span className="resultsSubCost">${(aplusImages.length * PRICING.aplus).toFixed(2)}</span>
+                    </div>
+                    <div className="resultsGrid">
+                      {aplusImages.map((img, i) => renderImageTile(img, i))}
+                    </div>
+                  </>
+                )}
+              </>
+            );
+          })()}
+        </section>
+      ) : null}
+
+      {showListingPanel && listings ? (
+        <section className="listingSection" id="listing" aria-label="Generated listings">
+          <ListingPanel listings={listings}
+            brief={{
+              productName: brief.productName, category: brief.category, brandName: brief.brandName, sku: brief.sku,
+              material: brief.material, dimensions: brief.dimensions, weight: brief.weight,
+              description: brief.description, targetAudience: brief.targetAudience,
+              sellingPrice: brief.sellingPrice, mrp: brief.mrp, discountPercent: brief.discountPercent,
+              specialOffers: brief.specialOffers, warranty: brief.warranty,
+              countryOfOrigin: brief.countryOfOrigin, packageContents: brief.packageContents,
+              keyFeatures, productColors, marketplaces
+            }}
+            onClose={() => setShowListingPanel(false)} />
+        </section>
+      ) : null}
+
+      {/* Lightbox — tap any image to view full size */}
+      {lightboxImage && (
+        <div className="lightboxOverlay" onClick={() => setLightboxImage(null)} role="dialog" aria-modal="true" aria-label="Image preview">
+          <button className="lightboxClose" onClick={() => setLightboxImage(null)} aria-label="Close">✕</button>
+          <div className="lightboxContent" onClick={(e) => e.stopPropagation()}>
+            {getImageSrc(lightboxImage) ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={getImageSrc(lightboxImage)}
+                alt={lightboxImage.type}
+                className="lightboxImage"
+              />
+            ) : (
+              <div className="historyThumbPlaceholder">🖼</div>
+            )}
+            <div className="lightboxMeta">
+              <span className="lightboxType">{lightboxImage.type}</span>
+              {lightboxImage.type.includes("A+") && brief.customWidth && brief.customHeight && (
+                <span className="lightboxSize">{brief.customWidth}×{brief.customHeight}px</span>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
