@@ -54,6 +54,7 @@ export async function GET(
         url: img.url,
         storageKey: img.storageKey,
       })),
+      listings: generation.listings ?? null,
     });
   } catch (err) {
     console.error("Generation load error:", err);

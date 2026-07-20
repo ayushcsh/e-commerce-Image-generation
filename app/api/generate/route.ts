@@ -4,7 +4,8 @@ import { generateProductImage, generateAplusImage, uploadReferenceImages, type R
 import { buildImagePrompt, buildAplusPrompt, type GenerationBrief } from "@/lib/prompts";
 import { createGeneration } from "@/lib/generations";
 import { uploadToR2 } from "@/lib/cloudflare";
-import { chargeUserCredits, getUserCredits, PRICING } from "@/lib/credits";
+import { chargeUserCredits, getUserCredits } from "@/lib/credits";
+import { IMAGE_COST } from "@/lib/pricing";
 import { randomUUID } from "crypto";
 
 const MAX_REFERENCE_PHOTOS = 4;
@@ -93,8 +94,8 @@ export async function POST(request: Request) {
   const aplusTypes = imageTypes.filter((t) => APLUS_TYPES.has(t));
 
   // Calculate total cost
-  const basicCost = basicTypes.length * PRICING.basic;
-  const aplusCost = aplusTypes.length * PRICING.aplus;
+  const basicCost = basicTypes.length * IMAGE_COST.basic;
+  const aplusCost = aplusTypes.length * IMAGE_COST.aplus;
   const totalCost = basicCost + aplusCost;
 
   // Check credits
@@ -103,11 +104,11 @@ export async function POST(request: Request) {
 
   if (balance < totalCost) {
     return NextResponse.json({
-      error: `Insufficient credits. Need $${totalCost.toFixed(2)} (${basicTypes.length} basic @ $${PRICING.basic} + ${aplusTypes.length} A+ @ $${PRICING.aplus}), but have $${balance.toFixed(2)}.`,
+      error: `Insufficient credits. Need ${totalCost} (${basicTypes.length} basic @ ${IMAGE_COST.basic} + ${aplusTypes.length} A+ @ ${IMAGE_COST.aplus}), but have ${balance}.`,
       balance,
       totalCost,
       required: totalCost,
-      pricing: PRICING,
+      pricing: IMAGE_COST,
     }, { status: 402 });
   }
 
@@ -126,7 +127,7 @@ export async function POST(request: Request) {
   const generationId = randomUUID();
   const storagePrefix = `${userId}/${generationId}`;
 
-  let images: Array<{ type: string; mimeType: string; storageKey: string; url: string; data: string; isAplus: boolean }> = [];
+  let images: Array<{ type: string; mimeType: string; storageKey: string; url: string; data: string; isAplus: boolean; width: number; height: number }> = [];
 
   try {
     const referenceImageUrls = await uploadReferenceImages(referenceImages);
@@ -158,6 +159,8 @@ export async function POST(request: Request) {
           storageKey,
           url,
           isAplus: false,
+          width: customSize?.width ?? 1024,
+          height: customSize?.height ?? 1024,
         };
       });
       images = images.concat(basicImages);
@@ -204,6 +207,8 @@ export async function POST(request: Request) {
           storageKey,
           url,
           isAplus: true,
+          width: customSize?.width ?? 1024,
+          height: customSize?.height ?? 1024,
         };
       });
       images = images.concat(aplusImages);
@@ -215,7 +220,7 @@ export async function POST(request: Request) {
   }
 
   // Charge credits
-  const chargeDesc = `${basicTypes.length} basic @ $${PRICING.basic} + ${aplusTypes.length} A+ @ $${PRICING.aplus}`;
+  const chargeDesc = `${basicTypes.length} basic @ ${IMAGE_COST.basic} + ${aplusTypes.length} A+ @ ${IMAGE_COST.aplus}`;
   const chargeResult = await chargeUserCredits(
     userId,
     totalCost,

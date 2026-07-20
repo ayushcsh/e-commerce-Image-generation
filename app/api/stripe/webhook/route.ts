@@ -25,18 +25,17 @@ export async function POST(request: Request) {
     const session = event.data.object as Stripe.Checkout.Session;
     const userId = session.metadata?.userId;
     const plan = session.metadata?.plan ?? "credits";
-    const creditsUsd = parseFloat(session.metadata?.creditsUsd ?? "0");
+    const credits = parseInt(session.metadata?.credits ?? "0", 10);
 
-    if (!userId || !creditsUsd) {
-      console.error("[stripe] webhook missing userId/creditsUsd for session", session.id);
+    if (!userId || !credits) {
+      console.error("[stripe] webhook missing userId/credits for session", session.id);
       return NextResponse.json({ received: true });
     }
 
-    // Credit the USD value of credits purchased (not the INR paid — avoids
-    // rate fluctuation issues). Keyed by session ID so retries can't double-credit.
+    // Keyed by session ID so retried webhook deliveries can't double-credit.
     await addUserCredits(
       userId,
-      creditsUsd,
+      credits,
       `Stripe purchase: ${plan} plan`,
       session.id
     );

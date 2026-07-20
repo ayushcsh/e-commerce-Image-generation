@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { signIn } from "next-auth/react";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 
 const errorMessages: Record<string, string> = {
   CredentialsSignin: "Invalid email or password.",
@@ -18,6 +18,12 @@ export default function LoginPage() {
   const [globalError, setGlobalError] = useState<string>("");
   const [isPending, startTransition] = useTransition();
   const callbackUrl = "/studio";
+
+  // Deep-link straight into signup mode when arriving via a "Create Account" link
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("mode") === "register") setMode("register");
+  }, []);
 
   async function handleCredentials(formData: FormData) {
     setError("");
@@ -62,18 +68,17 @@ export default function LoginPage() {
 
   return (
     <main className="loginPage">
+      <Link className="loginHomeBtn" href="/" aria-label="Back to home">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 11.5 12 4l9 7.5" />
+          <path d="M5.5 10v9a1 1 0 0 0 1 1H9a1 1 0 0 0 1-1v-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v4a1 1 0 0 0 1 1h2.5a1 1 0 0 0 1-1v-9" />
+        </svg>
+      </Link>
+
       <div className="loginCard">
         <section className="loginHero" aria-hidden="true" />
 
         <section className="loginPanel">
-          <Link className="loginBrand" href="/">
-            <span className="brandMark" aria-hidden="true">AI</span>
-            <span>
-              <strong>AI Product Image Studio</strong>
-              <small>Marketplace visuals from product photos</small>
-            </span>
-          </Link>
-
           <div className="loginCopy">
             <h1>{mode === "signin" ? "Sign in to your account" : "Create your account"}</h1>
             <p>{mode === "signin"

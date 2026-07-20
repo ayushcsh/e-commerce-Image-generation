@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
     }
 
     const userId = user._id.toString();
-    const existing = await setUserCredits(userId, amount, description || `Admin grant: $${amount.toFixed(2)}`);
+    const existing = await setUserCredits(userId, amount, description || `Admin grant: ${amount} credits`);
 
     return NextResponse.json({
       success: true,

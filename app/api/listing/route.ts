@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
+import { createGeneration, saveGenerationListings } from "@/lib/generations";
 
 export type MarketplaceListing = {
   title: string;
@@ -8,24 +9,13 @@ export type MarketplaceListing = {
   keywords?: string[];
   seoTitle?: string;
   seoDescription?: string;
-  tags?: string[];
   highlights?: string[];
-  productType?: string;
-  vendor?: string;
-  bodyHtml?: string;
-  material?: string;
-  occasion?: string;
 };
 
 export type AllListings = {
   amazon: MarketplaceListing;
   flipkart: MarketplaceListing;
   meesho: MarketplaceListing;
-  myntra: MarketplaceListing;
-  shopify: MarketplaceListing;
-  woocommerce: MarketplaceListing;
-  etsy: MarketplaceListing;
-  ajio: MarketplaceListing;
   rawResponse?: string;
 };
 
@@ -128,116 +118,6 @@ Respond ONLY as JSON:
   "highlights": ["string", "string", ...]
 }`;
 
-    case "myntra":
-      return `${baseContext}
-
-You are an expert Myntra product listing copywriter. Myntra is a fashion-focused Indian marketplace. Generate:
-
-1. **Title**: Clean product name with brand.
-2. **Description**: Fashion-forward description emphasizing style, fit, and occasion.
-3. **Highlights**: Style and fashion highlights.
-4. **SEO Title**: Fashion keywords + brand + product type.
-5. **Tags** (comma-separated): Fashion/style keywords for discoverability.
-
-Respond ONLY as JSON:
-{
-  "title": "string",
-  "description": "string",
-  "highlights": ["string", "string", ...],
-  "seoTitle": "string",
-  "tags": ["string", "string", ...],
-  "productType": "string"
-}`;
-
-    case "shopify":
-      return `${baseContext}
-
-You are an expert Shopify product listing copywriter. Generate a complete Shopify listing:
-
-1. **Title**: Search-optimized product title with key terms.
-2. **Description (body_html)**: Full HTML description with product details, features, shipping info. Use basic HTML tags (<p>, <ul>, <li>, <strong>) for formatting.
-3. **SEO Title** (max 70 chars): Meta title for search engines.
-4. **SEO Description** (max 320 chars): Meta description.
-5. **Tags** (comma-separated, Shopify max 75 chars per tag, up to 20 tags): Browse-ability keywords.
-6. **Product Type**: Clean category hierarchy (e.g., "Clothing > T-Shirts > Men's").
-7. **Vendor**: Brand name.
-
-Respond ONLY as JSON:
-{
-  "title": "string",
-  "bodyHtml": "string (HTML formatted)",
-  "seoTitle": "string (max 70 chars)",
-  "seoDescription": "string (max 320 chars)",
-  "tags": ["string", "string", ...],
-  "productType": "string",
-  "vendor": "string"
-}`;
-
-    case "woocommerce":
-      return `${baseContext}
-
-You are an expert WooCommerce product listing copywriter. WooCommerce stores vary widely but typically serve niche brands. Generate:
-
-1. **Title**: Clean, descriptive product title.
-2. **Description**: Full product description with features.
-3. **Short Description**: 2-3 line pitch for the product card.
-4. **SEO Title** (max 60 chars).
-5. **SEO Description** (max 160 chars).
-6. **Tags**: Product tags for filtering.
-7. **Categories**: Suggested WooCommerce categories based on the product.
-
-Respond ONLY as JSON:
-{
-  "title": "string",
-  "description": "string",
-  "seoTitle": "string (max 60 chars)",
-  "seoDescription": "string (max 160 chars)",
-  "tags": ["string", "string", ...],
-  "productType": "string"
-}`;
-
-    case "etsy":
-      return `${baseContext}
-
-You are an expert Etsy product listing copywriter. Etsy is a handmade/vintage/craft marketplace. Generate:
-
-1. **Title** (max 140 characters): Etsy-optimized with search terms naturally woven in. Include product type, material, occasion, style.
-2. **Description**: Personal, storytelling style. Explain what makes this product special, how it was made (if applicable), dimensions, materials in detail.
-3. **Tags** (13 tags, each max 20 characters): Etsy search terms — be specific and include synonyms.
-4. **Materials** (comma-separated): All materials used.
-5. **Occasion**: When would someone buy this? (e.g., Wedding, Birthday, Anniversary)
-6. **SEO Title**: Craft/Etsy search-optimized title.
-
-Respond ONLY as JSON:
-{
-  "title": "string (max 140 chars)",
-  "description": "string",
-  "tags": ["string (max 20 chars)", ...],
-  "material": "string",
-  "occasion": "string",
-  "seoTitle": "string"
-}`;
-
-    case "ajio":
-      return `${baseContext}
-
-You are an expert Ajio product listing copywriter. Ajio is a fashion and lifestyle Indian marketplace targeting trendy, urban buyers. Generate:
-
-1. **Title**: Stylish, brand-forward title with key features.
-2. **Description**: Fashion-forward description.
-3. **Highlights**: Style and quality highlights.
-4. **SEO Title**: Fashion keywords + brand + product type.
-5. **Tags**: Fashion/style keywords.
-
-Respond ONLY as JSON:
-{
-  "title": "string",
-  "description": "string",
-  "highlights": ["string", "string", ...],
-  "seoTitle": "string",
-  "tags": ["string", "string", ...]
-}`;
-
     default:
       return `${baseContext}
 
@@ -299,11 +179,7 @@ async function generateListingForMarketplace(
       keywords: [],
       seoTitle: "",
       seoDescription: "",
-      tags: [],
-      highlights: [],
-      productType: "",
-      vendor: "",
-      bodyHtml: ""
+      highlights: []
     };
   }
 }
@@ -316,10 +192,12 @@ export async function POST(request: Request) {
   }
 
   let brief: Record<string, unknown>;
+  let generationId: string | undefined;
 
   try {
     const json = await request.json();
     brief = json.brief || json;
+    generationId = typeof json.generationId === "string" ? json.generationId : undefined;
   } catch {
     return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
   }
@@ -338,18 +216,12 @@ export async function POST(request: Request) {
   const marketplaceMap: Record<string, string> = {
     Amazon: "amazon",
     Flipkart: "flipkart",
-    Meesho: "meesho",
-    Myntra: "myntra",
-    Shopify: "shopify",
-    WooCommerce: "woocommerce",
-    Etsy: "etsy",
-    Ajio: "ajio"
+    Meesho: "meesho"
   };
 
-  // Limit to 5 marketplace generations at once to avoid long response times
   const marketplacesToGenerate = selectedMarketplaces
-    .slice(0, 5)
-    .map((m) => marketplaceMap[m] || m.toLowerCase());
+    .map((m) => marketplaceMap[m])
+    .filter((m): m is string => Boolean(m));
 
   try {
     const results = await Promise.allSettled(
@@ -361,12 +233,7 @@ export async function POST(request: Request) {
     const allListings: AllListings = {
       amazon: { title: "", description: "", bullets: [], keywords: [], seoTitle: "", seoDescription: "" },
       flipkart: { title: "", description: "", highlights: [], seoTitle: "", seoDescription: "" },
-      meesho: { title: "", description: "", highlights: [] },
-      myntra: { title: "", description: "", highlights: [], seoTitle: "", tags: [], productType: "" },
-      shopify: { title: "", description: "", seoTitle: "", seoDescription: "", tags: [], productType: "", vendor: "", bodyHtml: "" },
-      woocommerce: { title: "", description: "", seoTitle: "", seoDescription: "", tags: [], productType: "" },
-      etsy: { title: "", description: "", tags: [], material: "", occasion: "", seoTitle: "" },
-      ajio: { title: "", description: "", highlights: [], seoTitle: "", tags: [] }
+      meesho: { title: "", description: "", highlights: [] }
     };
 
     marketplacesToGenerate.forEach((marketplace, index) => {
@@ -376,7 +243,33 @@ export async function POST(request: Request) {
       }
     });
 
-    return NextResponse.json(allListings);
+    // Persist the listing text so it shows up alongside images in history.
+    // Attach to the existing generation (images already made) if one was passed in,
+    // otherwise create a lightweight image-less record just to hold the listing text.
+    let savedGenerationId: string | null = null;
+    try {
+      const attached = generationId
+        ? await saveGenerationListings(generationId, session.user.id, allListings)
+        : false;
+
+      if (attached) {
+        savedGenerationId = generationId!;
+      } else {
+        savedGenerationId = await createGeneration({
+          userId: session.user.id,
+          productName: String(brief.productName || "Untitled product"),
+          category: String(brief.category || ""),
+          marketplaces: selectedMarketplaces,
+          background: "",
+          images: [],
+          listings: allListings,
+        });
+      }
+    } catch (err) {
+      console.error("Listing save error:", err);
+    }
+
+    return NextResponse.json({ ...allListings, id: savedGenerationId });
   } catch (error) {
     console.error("Listing generation error:", error);
     const message = error instanceof Error ? error.message : "Listing generation failed.";

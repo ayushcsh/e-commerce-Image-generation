@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { getUserCredits, setUserCredits, getTransactionHistory, PRICING } from "@/lib/credits";
+import { getUserCredits, setUserCredits, getTransactionHistory } from "@/lib/credits";
+import { IMAGE_COST } from "@/lib/pricing";
 
 export async function GET() {
   const session = await auth();
@@ -14,7 +15,7 @@ export async function GET() {
 
     return NextResponse.json({
       balance: credits?.balance ?? 0,
-      pricing: PRICING,
+      pricing: IMAGE_COST,
       transactions: transactions.map((t) => ({
         type: t.type,
         amount: t.amount,

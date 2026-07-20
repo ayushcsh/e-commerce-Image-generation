@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import clientPromise from "@/lib/mongodb";
-import { setUserCredits } from "@/lib/credits";
+import { grantWelcomeBonusIfNew } from "@/lib/credits";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -70,8 +70,8 @@ export async function POST(request: NextRequest) {
       createdAt: new Date(),
     });
 
-    // Grant $10 test credits on signup
-    await setUserCredits(result.insertedId.toString(), 10, "Welcome bonus: $10 test credits");
+    // Grant 1 free credit on signup
+    await grantWelcomeBonusIfNew(result.insertedId.toString());
 
     return NextResponse.json(
       { id: result.insertedId.toString(), email, message: "Account created. You can now sign in." },

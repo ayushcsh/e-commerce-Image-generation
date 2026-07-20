@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
   try {
     const existing = await getUserCredits(userId);
     const newBalance = (existing?.balance ?? 0) + amount;
-    await setUserCredits(userId, newBalance, description || `Granted $${amount.toFixed(2)}`);
+    await setUserCredits(userId, newBalance, description || `Granted ${amount} credits`);
 
     return NextResponse.json({ success: true, balance: newBalance });
   } catch (err) {

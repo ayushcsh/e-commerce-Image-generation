@@ -22,6 +22,8 @@ export type GenerationRecord = {
   category: string;
   marketplaces: string[];
   background: string;
+  /** AI-generated marketplace listing text (title, bullets, description, etc.), saved alongside the images. */
+  listings?: unknown;
   createdAt: Date;
 };
 
@@ -46,6 +48,7 @@ export async function createGeneration(input: {
   background: string;
   /** Array of { type, mimeType, storageKey, url, isAplus } — images already uploaded to R2 */
   images: Array<{ type: string; mimeType: string; storageKey: string; url: string; isAplus?: boolean }>;
+  listings?: unknown;
 }) {
   const db = await getDb();
   const now = new Date();
@@ -56,6 +59,7 @@ export async function createGeneration(input: {
     category: input.category,
     marketplaces: input.marketplaces,
     background: input.background,
+    ...(input.listings ? { listings: input.listings } : {}),
     createdAt: now,
   };
 
@@ -80,6 +84,18 @@ export async function createGeneration(input: {
   }
 
   return insertedId.toString();
+}
+
+/** Attach/replace the saved listing text on an existing generation the user owns. Returns false if not found. */
+export async function saveGenerationListings(id: string, userId: string, listings: unknown): Promise<boolean> {
+  if (!ObjectId.isValid(id)) return false;
+
+  const db = await getDb();
+  const result = await db
+    .collection<GenerationRecord>("generations")
+    .updateOne({ _id: new ObjectId(id), userId }, { $set: { listings } });
+
+  return result.matchedCount > 0;
 }
 
 export async function getGenerationForUser(id: string, userId: string) {

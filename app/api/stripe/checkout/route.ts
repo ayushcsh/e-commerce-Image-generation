@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { getStripe, CREDIT_PLANS, inrToUsd, isCreditPlanId } from "@/lib/stripe";
+import { getStripe } from "@/lib/stripe";
+import { CREDIT_PLANS, isCreditPlanId } from "@/lib/pricing";
 
 export async function POST(request: Request) {
   const session = await auth();
@@ -17,7 +18,7 @@ export async function POST(request: Request) {
 
   const planConfig = CREDIT_PLANS[plan];
   const priceInr = planConfig.priceInr;
-  const creditsUsd = planConfig.creditsUsd;
+  const credits = planConfig.credits;
   const origin = request.headers.get("origin") || new URL(request.url).origin;
 
   try {
@@ -29,8 +30,8 @@ export async function POST(request: Request) {
             currency: "inr",
             unit_amount: priceInr * 100, // Stripe uses paisa
             product_data: {
-              name: `${planConfig.name} Plan — ${creditsUsd} Credits`,
-              description: `Purchase ${creditsUsd} credits for AI product image generation`,
+              name: `${planConfig.name} Plan — ${credits} Credits`,
+              description: `Purchase ${credits} credits for AI product image generation`,
             },
           },
           quantity: 1,
@@ -42,7 +43,7 @@ export async function POST(request: Request) {
       metadata: {
         userId: session.user.id,
         plan,
-        creditsUsd: String(creditsUsd),
+        credits: String(credits),
         priceInr: String(priceInr),
       },
     });

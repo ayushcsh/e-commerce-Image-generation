@@ -5,6 +5,7 @@ import { MongoDBAdapter } from "@auth/mongodb-adapter";
 import bcrypt from "bcryptjs";
 import clientPromise from "@/lib/mongodb";
 import { authConfig } from "@/auth.config";
+import { grantWelcomeBonusIfNew } from "@/lib/credits";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
@@ -71,6 +72,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
       }
       return session;
+    }
+  },
+  events: {
+    // Fires once when the adapter creates a brand-new user record — covers
+    // OAuth sign-ins (Google), which never go through the credentials
+    // register route. Credentials signups are granted in that route instead,
+    // since the adapter isn't involved in creating those user records.
+    async createUser({ user }) {
+      if (user.id) await grantWelcomeBonusIfNew(user.id);
     }
   }
 });

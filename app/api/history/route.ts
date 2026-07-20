@@ -49,6 +49,7 @@ export async function GET() {
         thumbnail: thumb?.url ?? null,
         thumbnailMimeType: thumb?.mimeType ?? null,
         imageCount: 0, // populated below
+        hasListing: Boolean(g.listings),
       };
     });
 

@@ -18,14 +18,14 @@ import type { ProductAnalysis } from "@/app/api/analyze/route";
 import type { AllListings } from "@/app/api/listing/route";
 import {
   exportAmazonCsv,
-  exportShopifyCsv,
   exportFlipkartCsv,
   exportMeeshoCsv,
-  exportEtsyCsv,
-  exportWooCommerceCsv,
   exportJson,
   type BriefForExport
 } from "@/lib/export";
+import { IMAGE_COST } from "@/lib/pricing";
+import OnboardingProvider, { useTourContext } from "@/components/onboarding/OnboardingProvider";
+import CreditWelcomeModal from "@/components/onboarding/CreditWelcomeModal";
 
 type UploadedImage = {
   id: string;
@@ -44,8 +44,9 @@ type GeneratedImageResult = {
   storageKey?: string;
   /** R2 public URL */
   url?: string;
-  width?: number;
-  height?: number;
+  /** Actual image dimensions from generation */
+  width: number;
+  height: number;
   /** Whether this is an A+ image (GPT Image 2) */
   isAplus?: boolean;
 };
@@ -59,6 +60,7 @@ type HistoryItem = {
   thumbnail: string | null;
   thumbnailMimeType: string | null;
   imageCount: number;
+  hasListing: boolean;
 };
 
 type BriefState = {
@@ -68,7 +70,6 @@ type BriefState = {
   sku: string;
   background: string;
   customBackgroundColor: string;
-  customMarketplace: string;
   material: string;
   dimensions: string;
   weight: string;
@@ -112,7 +113,7 @@ const CATEGORY_SUGGESTIONS = [
   "Home & Kitchen", "Sports & Outdoors", "Toys & Games", "Health & Personal Care"
 ];
 
-const MARKETPLACES = ["Amazon", "Flipkart", "Meesho", "Myntra", "Ajio", "Shopify", "WooCommerce", "Custom"];
+const MARKETPLACES = ["Amazon", "Flipkart", "Meesho"];
 const BACKGROUND_OPTIONS = ["Pure White", "Transparent", "Lifestyle", "Gradient", "Custom Color"];
 const FONT_STYLES = ["Modern", "Classic", "Bold", "Elegant", "Minimal", "Playful"];
 
@@ -137,11 +138,6 @@ const APLUS_IMAGE_TYPES = [
   { id: "Three Image Module",      label: "Three Image Module",      hint: "1464×400 · 3-panel row",             size: "1464x400"  },
   { id: "Four Image Module",       label: "Four Image Module",       hint: "1464×800 · 2×2 grid",               size: "1464x800"  },
 ];
-
-const PRICING = {
-  basic: 0.15,  // $0.15 per basic image
-  aplus: 0.90,  // $0.90 per A+ image (GPT Image 2)
-} as const;
 
 // Display labels with optional badges for image types
 const IMAGE_TYPE_LABELS: Record<string, string> = {
@@ -169,7 +165,7 @@ const RESOLUTIONS = ["Standard", "HD", "4K"];
 
 const initialBrief: BriefState = {
   productName: "", category: "", brandName: "", sku: "",
-  background: BACKGROUND_OPTIONS[0], customBackgroundColor: "#ffffff", customMarketplace: "",
+  background: BACKGROUND_OPTIONS[0], customBackgroundColor: "#ffffff",
   material: "", dimensions: "", weight: "",
   fontStyle: FONT_STYLES[0], aiStyle: AI_IMAGE_STYLES[0],
   textOnImage: TEXT_ON_IMAGE_OPTIONS[0], language: LANGUAGE_OPTIONS[0],
@@ -261,11 +257,11 @@ function NotificationToast({ notification, onDismiss }: { notification: Notifica
 }
 
 // ── Reusable UI components ──────────────────────────────────────────────────────
-function PillGroup({ legend, options, value, onChange }: {
-  legend: string; options: string[]; value: string; onChange: (v: string) => void;
+function PillGroup({ legend, options, value, onChange, id }: {
+  legend: string; options: string[]; value: string; onChange: (v: string) => void; id?: string;
 }) {
   return (
-    <div className="controlGroup">
+    <div className="controlGroup" id={id}>
       <span className="controlLabel">{legend}</span>
       <div className="pillGroup">
         {options.map((option) => (
@@ -297,9 +293,9 @@ function CheckGrid({ legend, hint, options, values, onToggle, columns = 3 }: {
   );
 }
 
-function ChipInput({ legend, hint, values, onAdd, onRemove, placeholder, max, withColorPicker }: {
+function ChipInput({ legend, hint, values, onAdd, onRemove, placeholder, max, withColorPicker, id }: {
   legend: string; hint?: string; values: string[]; onAdd: (v: string) => void; onRemove: (v: string) => void;
-  placeholder?: string; max?: number; withColorPicker?: boolean;
+  placeholder?: string; max?: number; withColorPicker?: boolean; id?: string;
 }) {
   const [draft, setDraft] = useState("");
   const atLimit = Boolean(max) && values.length >= (max ?? 0);
@@ -312,7 +308,7 @@ function ChipInput({ legend, hint, values, onAdd, onRemove, placeholder, max, wi
   }
 
   return (
-    <div className="chipField">
+    <div className="chipField" id={id}>
       <div className="chipFieldHead">
         <span>{legend}</span>
         {max ? <small>{values.length}/{max}</small> : null}
@@ -361,7 +357,7 @@ function FormSection({ id, eyebrow, title, description, children }: {
 }
 
 // ── Listing Panel ───────────────────────────────────────────────────────────────
-type ActiveTab = "amazon" | "flipkart" | "meesho" | "myntra" | "shopify" | "etsy";
+type ActiveTab = "amazon" | "flipkart" | "meesho";
 
 function ListingPanel({ listings, brief, onClose }: {
   listings: AllListings; brief: BriefForExport; onClose: () => void;
@@ -371,8 +367,7 @@ function ListingPanel({ listings, brief, onClose }: {
 
   const tabs: { id: ActiveTab; label: string }[] = [
     { id: "amazon", label: "Amazon" }, { id: "flipkart", label: "Flipkart" },
-    { id: "meesho", label: "Meesho" }, { id: "myntra", label: "Myntra" },
-    { id: "shopify", label: "Shopify" }, { id: "etsy", label: "Etsy" }
+    { id: "meesho", label: "Meesho" }
   ];
 
   function copyToClipboard(text: string, field: string) {
@@ -390,9 +385,6 @@ function ListingPanel({ listings, brief, onClose }: {
       case "amazon":      content = exportAmazonCsv(brief, listings);      filename = `${slug}-amazon.csv`;        break;
       case "flipkart":    content = exportFlipkartCsv(brief, listings);    filename = `${slug}-flipkart.csv`;       break;
       case "meesho":      content = exportMeeshoCsv(brief, listings);      filename = `${slug}-meesho.csv`;         break;
-      case "shopify":     content = exportShopifyCsv(brief, listings);     filename = `${slug}-shopify.csv`;        break;
-      case "etsy":        content = exportEtsyCsv(brief, listings);        filename = `${slug}-etsy.csv`;           break;
-      case "woocommerce":  content = exportWooCommerceCsv(brief, listings); filename = `${slug}-woocommerce.csv`;    break;
       case "json":
         content = exportJson({ brief, listings, generatedAt: new Date().toISOString() });
         filename = `${slug}-listing.json`;
@@ -415,7 +407,10 @@ function ListingPanel({ listings, brief, onClose }: {
     <div className="listingPanelOverlay">
       <div className="listingPanel listingPanelWide">
         <div className="listingPanelHeader">
-          <h2>AI Generated Listings</h2>
+          <div>
+            <h2>AI Generated Listings</h2>
+            {brief.productName ? <p className="listingPanelSubtitle">{brief.productName}</p> : null}
+          </div>
           <button className="ghostButton" type="button" onClick={onClose} aria-label="Close">✕</button>
         </div>
 
@@ -430,98 +425,90 @@ function ListingPanel({ listings, brief, onClose }: {
         </div>
 
         <div className="listingContent">
-          {current.title ? <FieldBlock label="Title" value={current.title}
-            copied={copiedField === `${activeTab}-title`}
-            onCopy={() => copyToClipboard(current.title!, `${activeTab}-title`)} /> : null}
-
-          {current.bullets && current.bullets.length > 0 && (
-            <div className="listingField">
-              <div className="listingFieldHead">
-                <span>Bullet Points</span>
-                <button className="ghostButton compactButton" type="button"
-                  onClick={() => copyToClipboard(current.bullets!.join("\n"), `${activeTab}-bullets`)}>
-                  {copiedField === `${activeTab}-bullets` ? "Copied!" : "Copy all"}
-                </button>
-              </div>
-              {current.bullets.map((b, i) => (
-                <div key={i} className="listingBullet">
-                  <span className="bulletNum">{i + 1}</span>
-                  <span className="bulletText">{b}</span>
+          {current.title || current.description ? (
+            <div className="listingPrimary">
+              {current.title ? (
+                <div className="listingPrimaryRow">
+                  <h3 className="listingTitleText">{current.title}</h3>
                   <button className="ghostButton compactButton" type="button"
-                    onClick={() => copyToClipboard(b, `${activeTab}-bullet-${i}`)}>
-                    {copiedField === `${activeTab}-bullet-${i}` ? "✓" : "Copy"}
+                    onClick={() => copyToClipboard(current.title!, `${activeTab}-title`)}>
+                    {copiedField === `${activeTab}-title` ? "Copied!" : "Copy"}
                   </button>
                 </div>
-              ))}
-            </div>
-          )}
-
-          {current.highlights && current.highlights.length > 0 && (
-            <div className="listingField">
-              <div className="listingFieldHead">
-                <span>Highlights</span>
-                <button className="ghostButton compactButton" type="button"
-                  onClick={() => copyToClipboard(current.highlights!.join("\n"), `${activeTab}-highlights`)}>
-                  {copiedField === `${activeTab}-highlights` ? "Copied!" : "Copy all"}
-                </button>
-              </div>
-              {current.highlights.map((h, i) => (
-                <div key={i} className="listingBullet">
-                  <span className="bulletText">{h}</span>
+              ) : null}
+              {current.description ? (
+                <div className="listingPrimaryRow listingPrimaryRowTop">
+                  <p className="listingDescriptionText">{current.description}</p>
+                  <button className="ghostButton compactButton" type="button"
+                    onClick={() => copyToClipboard(current.description!, `${activeTab}-desc`)}>
+                    {copiedField === `${activeTab}-desc` ? "Copied!" : "Copy"}
+                  </button>
                 </div>
-              ))}
+              ) : null}
             </div>
-          )}
+          ) : null}
 
-          {current.description ? <FieldBlock label="Description" value={current.description}
-            copied={copiedField === `${activeTab}-desc`}
-            onCopy={() => copyToClipboard(current.description!, `${activeTab}-desc`)} multiline /> : null}
-
-          {current.keywords && current.keywords.length > 0 && (
-            <div className="listingField">
-              <div className="listingFieldHead">
-                <span>Backend Keywords</span>
+          {(current.bullets && current.bullets.length > 0) || (current.highlights && current.highlights.length > 0) ? (
+            <div className="listingSectionBlock">
+              <div className="listingSectionHead">
+                <span>{current.bullets ? "Bullet Points" : "Highlights"}</span>
                 <button className="ghostButton compactButton" type="button"
-                  onClick={() => copyToClipboard(current.keywords!.join(", "), `${activeTab}-keywords`)}>
-                  {copiedField === `${activeTab}-keywords` ? "Copied!" : "Copy all"}
+                  onClick={() => copyToClipboard((current.bullets ?? current.highlights ?? []).join("\n"), `${activeTab}-points`)}>
+                  {copiedField === `${activeTab}-points` ? "Copied!" : "Copy all"}
                 </button>
               </div>
-              <div className="chipList">
-                {current.keywords.map((k) => <span className="chip" key={k}>{k}</span>)}
-              </div>
+              <ul className="listingPointList">
+                {(current.bullets ?? current.highlights ?? []).map((point, i) => (
+                  <li key={i} className="listingPoint">
+                    <span className="listingPointText">{point}</span>
+                    <button className="listingPointCopy" type="button"
+                      onClick={() => copyToClipboard(point, `${activeTab}-point-${i}`)}
+                      aria-label="Copy this point">
+                      {copiedField === `${activeTab}-point-${i}` ? "✓" : "Copy"}
+                    </button>
+                  </li>
+                ))}
+              </ul>
             </div>
-          )}
+          ) : null}
 
-          {current.tags && current.tags.length > 0 && (
-            <div className="listingField">
-              <div className="listingFieldHead">
-                <span>Tags</span>
-                <button className="ghostButton compactButton" type="button"
-                  onClick={() => copyToClipboard(current.tags!.join(", "), `${activeTab}-tags`)}>
-                  {copiedField === `${activeTab}-tags` ? "Copied!" : "Copy all"}
-                </button>
-              </div>
-              <div className="chipList">
-                {current.tags.map((t) => <span className="chip" key={t}>{t}</span>)}
-              </div>
+          {(current.keywords && current.keywords.length > 0) || current.seoTitle || current.seoDescription ? (
+            <div className="listingMeta">
+              <p className="listingMetaLabel">SEO &amp; Metadata</p>
+              {current.seoTitle ? (
+                <div className="listingMetaRow">
+                  <span className="listingMetaKey">SEO Title</span>
+                  <span className="listingMetaValue">{current.seoTitle}</span>
+                  <button className="ghostButton compactButton" type="button"
+                    onClick={() => copyToClipboard(current.seoTitle!, `${activeTab}-seo-title`)}>
+                    {copiedField === `${activeTab}-seo-title` ? "Copied!" : "Copy"}
+                  </button>
+                </div>
+              ) : null}
+              {current.seoDescription ? (
+                <div className="listingMetaRow">
+                  <span className="listingMetaKey">SEO Description</span>
+                  <span className="listingMetaValue">{current.seoDescription}</span>
+                  <button className="ghostButton compactButton" type="button"
+                    onClick={() => copyToClipboard(current.seoDescription!, `${activeTab}-seo-desc`)}>
+                    {copiedField === `${activeTab}-seo-desc` ? "Copied!" : "Copy"}
+                  </button>
+                </div>
+              ) : null}
+              {current.keywords && current.keywords.length > 0 ? (
+                <div className="listingMetaRow listingMetaRowChips">
+                  <span className="listingMetaKey">Keywords</span>
+                  <div className="chipList">
+                    {current.keywords.map((k) => <span className="chip" key={k}>{k}</span>)}
+                  </div>
+                  <button className="ghostButton compactButton" type="button"
+                    onClick={() => copyToClipboard(current.keywords!.join(", "), `${activeTab}-keywords`)}>
+                    {copiedField === `${activeTab}-keywords` ? "Copied!" : "Copy"}
+                  </button>
+                </div>
+              ) : null}
             </div>
-          )}
-
-          {current.seoTitle ? <FieldBlock label="SEO Title" value={current.seoTitle}
-            copied={copiedField === `${activeTab}-seo-title`}
-            onCopy={() => copyToClipboard(current.seoTitle!, `${activeTab}-seo-title`)} /> : null}
-
-          {current.seoDescription ? <FieldBlock label="SEO Description" value={current.seoDescription}
-            copied={copiedField === `${activeTab}-seo-desc`}
-            onCopy={() => copyToClipboard(current.seoDescription!, `${activeTab}-seo-desc`)} /> : null}
-
-          {current.material ? <FieldBlock label="Material" value={current.material}
-            copied={copiedField === `${activeTab}-material`}
-            onCopy={() => copyToClipboard(current.material!, `${activeTab}-material`)} /> : null}
-
-          {current.occasion ? <FieldBlock label="Occasion" value={current.occasion}
-            copied={copiedField === `${activeTab}-occasion`}
-            onCopy={() => copyToClipboard(current.occasion!, `${activeTab}-occasion`)} /> : null}
+          ) : null}
 
           {!current.title && !current.description && (
             <div className="listingEmpty">
@@ -536,29 +523,9 @@ function ListingPanel({ listings, brief, onClose }: {
           {activeTab === "amazon"     && <button className="secondaryButton compactButton" type="button" onClick={() => handleExport("amazon")}>Amazon CSV ⬇</button>}
           {activeTab === "flipkart"   && <button className="secondaryButton compactButton" type="button" onClick={() => handleExport("flipkart")}>Flipkart CSV ⬇</button>}
           {activeTab === "meesho"     && <button className="secondaryButton compactButton" type="button" onClick={() => handleExport("meesho")}>Meesho CSV ⬇</button>}
-          {activeTab === "myntra"     && <button className="secondaryButton compactButton" type="button" onClick={() => handleExport("flipkart")}>Myntra CSV ⬇</button>}
-          {activeTab === "shopify"    && <button className="secondaryButton compactButton" type="button" onClick={() => handleExport("shopify")}>Shopify CSV ⬇</button>}
-          {activeTab === "etsy"       && <button className="secondaryButton compactButton" type="button" onClick={() => handleExport("etsy")}>Etsy CSV ⬇</button>}
-          <button className="secondaryButton compactButton" type="button" onClick={() => handleExport("woocommerce")}>WooCommerce ⬇</button>
           <button className="secondaryButton compactButton" type="button" onClick={() => handleExport("json")}>JSON ⬇</button>
         </div>
       </div>
-    </div>
-  );
-}
-
-function FieldBlock({ label, value, copied, onCopy, multiline = false }: {
-  label: string; value: string; copied: boolean; onCopy: () => void; multiline?: boolean;
-}) {
-  return (
-    <div className="listingField">
-      <div className="listingFieldHead">
-        <span>{label}</span>
-        <button className="ghostButton compactButton" type="button" onClick={onCopy}>
-          {copied ? "Copied!" : "Copy"}
-        </button>
-      </div>
-      {multiline ? <div className="listingMultiline">{value}</div> : <p className="listingValue">{value}</p>}
     </div>
   );
 }
@@ -576,10 +543,21 @@ export default function StudioPage() {
   const [marketplaces, setMarketplaces] = useState<string[]>([]);
   const [selectedBasicTypes, setSelectedBasicTypes] = useState<string[]>([]);
   const [selectedAplusTypes, setSelectedAplusTypes] = useState<string[]>([]);
+
+  const { isTourMode } = useTourContext();
+
+  // Pre-select one basic image type and lock A+ during onboarding tour
+  useEffect(() => {
+    if (isTourMode && selectedBasicTypes.length === 0) {
+      setSelectedBasicTypes(["Main Product (White Background)"]);
+    }
+  }, [isTourMode]);
   const [keyFeatures, setKeyFeatures] = useState<string[]>([]);
   const [productColors, setProductColors] = useState<string[]>([]);
   const [brandColors, setBrandColors] = useState<string[]>([]);
   const [isDragging, setIsDragging] = useState(false);
+  const [pulseLogoBtn, setPulseLogoBtn] = useState(false);
+  const pulseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [statusMessage, setStatusMessage] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -587,17 +565,29 @@ export default function StudioPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [lightboxImage, setLightboxImage] = useState<GeneratedImageResult | null>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
-  const analyzeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [isGeneratingListing, setIsGeneratingListing] = useState(false);
   const [listings, setListings] = useState<AllListings | null>(null);
   const [showListingPanel, setShowListingPanel] = useState(false);
+  const [currentGenerationId, setCurrentGenerationId] = useState<string | null>(null);
 
   // ── History sidebar ────────────────────────────────────────────────────────
   const [showHistory, setShowHistory] = useState(false);
   const [historyItems, setHistoryItems] = useState<HistoryItem[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null);
+
+  // ── First-time onboarding ────────────────────────────────────────────────────
+  const [showOnboard, setShowOnboard] = useState(true);
+  const [formWarnings, setFormWarnings] = useState<string[]>([]);
+
+  function dismissOnboard() {
+    setShowOnboard(false);
+  }
+
+  function markOnboardDone() {
+    setShowOnboard(false);
+  }
 
   // ── Credits ─────────────────────────────────────────────────────────────────
   const [creditBalance, setCreditBalance] = useState<number>(0);
@@ -618,11 +608,29 @@ export default function StudioPage() {
     loadCredits();
   }, []);
 
+  // ── First-login welcome credit popup ─────────────────────────────────────────
+  const [showCreditWelcome, setShowCreditWelcome] = useState(false);
+
+  useEffect(() => {
+    if (!session?.user?.id) return;
+    fetch("/api/credits/welcome")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.show) setShowCreditWelcome(true);
+      })
+      .catch(console.error);
+  }, [session?.user?.id]);
+
+  function dismissCreditWelcome() {
+    setShowCreditWelcome(false);
+    loadCredits();
+  }
+
   // Calculate cost preview
   const selectedCost = {
     basic: selectedBasicTypes.length,
     aplus: selectedAplusTypes.length,
-    total: selectedBasicTypes.length * PRICING.basic + selectedAplusTypes.length * PRICING.aplus,
+    total: selectedBasicTypes.length * IMAGE_COST.basic + selectedAplusTypes.length * IMAGE_COST.aplus,
   };
   const canAfford = creditBalance >= selectedCost.total;
 
@@ -648,15 +656,20 @@ export default function StudioPage() {
       const data = await res.json();
       if (data.images) {
         setGeneratedImages(
-          data.images.map((img: { type: string; mimeType: string; url: string; storageKey?: string; isAplus?: boolean }) => ({
+          data.images.map((img: { type: string; mimeType: string; url: string; storageKey?: string; isAplus?: boolean; width?: number; height?: number }) => ({
             type: img.type,
             mimeType: img.mimeType,
             data: "",
             url: img.url,
             storageKey: img.storageKey,
             isAplus: img.isAplus,
+            width: img.width ?? 1024,
+            height: img.height ?? 1024,
           }))
         );
+        setListings(data.listings ?? null);
+        setShowListingPanel(false);
+        setCurrentGenerationId(id);
         setShowHistory(false);
         setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
       }
@@ -669,8 +682,10 @@ export default function StudioPage() {
 
   function handleGenerationSuccess(newImages: GeneratedImageResult[], newId?: string) {
     setGeneratedImages(newImages);
+    setCurrentGenerationId(newId ?? null);
     loadHistory();
     loadCredits(); // Refresh credit balance
+    if (showOnboard) dismissOnboard();
     setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
   }
 
@@ -682,6 +697,7 @@ export default function StudioPage() {
     return () => {
       imagesRef.current.forEach((image) => URL.revokeObjectURL(image.url));
       if (logo) URL.revokeObjectURL(logo.url);
+      if (pulseTimerRef.current) clearTimeout(pulseTimerRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -699,7 +715,6 @@ export default function StudioPage() {
     setBrief((current) => ({ ...current, [field]: value }));
   }
 
-  // ── Auto-analyze on photo upload ─────────────────────────────────────────────
   function addFiles(fileList: FileList | File[]) {
     const incoming = Array.from(fileList).filter((file) => file.type.startsWith("image/"));
     if (incoming.length === 0) return;
@@ -713,18 +728,6 @@ export default function StudioPage() {
       if (nextImages.length > 0) setStatusMessage("");
       return [...current, ...nextImages];
     });
-
-    // Clear existing timer and set new one to auto-analyze after a short delay
-    if (analyzeTimerRef.current) clearTimeout(analyzeTimerRef.current);
-    analyzeTimerRef.current = setTimeout(() => {
-      // Only analyze if we now have photos and the user hasn't manually edited the form
-      setImages((current) => {
-        if (current.length > 0 && !isAnalyzing) {
-          triggerAnalyze(current);
-        }
-        return current;
-      });
-    }, 1500);
   }
 
   async function triggerAnalyze(imgs: UploadedImage[]) {
@@ -855,6 +858,8 @@ export default function StudioPage() {
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file || !file.type.startsWith("image/")) return;
+    if (pulseTimerRef.current) clearTimeout(pulseTimerRef.current);
+    setPulseLogoBtn(false);
     setLogo((current) => {
       if (current) URL.revokeObjectURL(current.url);
       return { id: createImageId(file, 0), name: file.name, size: formatBytes(file.size), url: URL.createObjectURL(file), file };
@@ -868,8 +873,10 @@ export default function StudioPage() {
     });
   }
 
+
   function resetBrief() {
-    if (analyzeTimerRef.current) clearTimeout(analyzeTimerRef.current);
+    if (pulseTimerRef.current) clearTimeout(pulseTimerRef.current);
+    setPulseLogoBtn(false);
     imagesRef.current.forEach((image) => URL.revokeObjectURL(image.url));
     imagesRef.current = [];
     setImages([]);
@@ -892,19 +899,22 @@ export default function StudioPage() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (images.length === 0) { setStatusMessage("Add at least one product photo."); fileInputRef.current?.focus(); return; }
-    if (!brief.productName.trim()) { setStatusMessage("Add a product name."); return; }
-    if (!brief.category.trim()) { setStatusMessage("Add a product category."); return; }
-    if (marketplaces.length === 0) { setStatusMessage("Select at least one marketplace."); return; }
+    const warnings: string[] = [];
+    if (images.length === 0) warnings.push("Add at least one product photo.");
+    if (!brief.productName.trim()) warnings.push("Add a product name.");
+    if (!brief.category.trim()) warnings.push("Add a product category.");
+    if (marketplaces.length === 0) warnings.push("Select at least one marketplace.");
+    if (selectedBasicTypes.length === 0 && selectedAplusTypes.length === 0) warnings.push("Pick at least one image type.");
+    if (!canAfford) warnings.push(`Insufficient credits — need ${selectedCost.total}, have ${creditBalance}.`);
 
-    // Check credits before generating
-    if (!canAfford) {
-      setStatusMessage(`Insufficient credits. Need $${selectedCost.total.toFixed(2)} but have $${creditBalance.toFixed(2)}.`);
-      return;
-    }
+    if (warnings.length > 0) { setFormWarnings(warnings); return; }
+    setFormWarnings([]);
 
     setIsGenerating(true);
     setGeneratedImages([]);
+    setListings(null);
+    setShowListingPanel(false);
+    setCurrentGenerationId(null);
     const imageTypes = [...selectedBasicTypes, ...selectedAplusTypes];
     setStatusMessage(`Generating ${imageTypes.length} image${imageTypes.length === 1 ? "" : "s"}...`);
     const payload = { ...brief, marketplaces, imageTypes, keyFeatures, productColors, brandColors };
@@ -955,14 +965,16 @@ export default function StudioPage() {
       const response = await fetch("/api/listing", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ brief: payload })
+        body: JSON.stringify({ brief: payload, generationId: currentGenerationId })
       });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || "Listing generation failed.");
-      setListings(result);
+      const { id: savedId, ...result } = await response.json();
+      if (!response.ok) throw new Error((result as { error?: string }).error || "Listing generation failed.");
+      setListings(result as AllListings);
       setShowListingPanel(true);
       setStatusMessage("");
-      addNotification({ type: "success", message: "✓ Listings generated for all marketplaces!" });
+      if (savedId) setCurrentGenerationId(savedId);
+      loadHistory();
+      addNotification({ type: "success", message: "✓ Listings generated for all marketplaces — saved to history!" });
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : "Listing generation failed.");
     } finally {
@@ -971,6 +983,10 @@ export default function StudioPage() {
   }
 
   function getImageAspectRatio(image: GeneratedImageResult): string {
+    // Use actual image dimensions when available
+    if (image.width && image.height) {
+      return `${image.width} / ${image.height}`;
+    }
     const t = image.type;
     if (t === "Main Product (White Background)") return "1 / 1";
     if (t === "Front/Side Angle") return "3 / 2";
@@ -1087,7 +1103,10 @@ export default function StudioPage() {
   ];
 
   return (
+    <OnboardingProvider tourMode>
     <main className={`studioPage${showHistory ? " historyOpen" : ""}`} suppressHydrationWarning>
+      <CreditWelcomeModal visible={showCreditWelcome} onClose={dismissCreditWelcome} />
+
       {/* ── Notification Toasts ── */}
       <div className="toastContainer" aria-live="polite" aria-atomic="true">
         {notifications.map((n) => (
@@ -1102,6 +1121,17 @@ export default function StudioPage() {
             <span className="analyzeOverlaySpinner" aria-hidden="true" />
             <strong>Analyzing your photos…</strong>
             <p>Our AI is reading product details, colors, and features to auto-fill your brief.</p>
+          </div>
+        </div>
+      )}
+
+      {/* ── Listing generation overlay ── */}
+      {isGeneratingListing && (
+        <div className="analyzeOverlay" role="status" aria-live="polite" aria-label="Generating listing text">
+          <div className="analyzeOverlayCard">
+            <span className="analyzeOverlaySpinner" aria-hidden="true" />
+            <strong>Writing your listings…</strong>
+            <p>AI is drafting titles, bullet points, and descriptions for {marketplaces.length > 0 ? marketplaces.join(", ") : "your marketplaces"}.</p>
           </div>
         </div>
       )}
@@ -1155,7 +1185,10 @@ export default function StudioPage() {
                         {item.marketplaces?.length > 0 && (
                           <span className="historyMarketplaces">{item.marketplaces.join(", ")}</span>
                         )}
-                        <time className="historyTime">{formatHistoryTime(item.createdAt)}</time>
+                        <div className="historyMetaFooter">
+                          <time className="historyTime">{formatHistoryTime(item.createdAt)}</time>
+                          {item.hasListing && <span className="historyListingBadge">📝 Listing</span>}
+                        </div>
                       </div>
                       {activeHistoryId === item.id && <span className="spinner" />}
                     </button>
@@ -1170,7 +1203,7 @@ export default function StudioPage() {
       <header className="studioTopBar">
         <Link className="studioBrand" href="/">
           <span className="brandMark" aria-hidden="true">AI</span>
-          <span><strong>Product Studio</strong><small>AI image generation</small></span>
+          <span><strong>VendorFlow</strong><small>AI image generation</small></span>
         </Link>
         <div className="studioTopActions">
           <button
@@ -1182,7 +1215,7 @@ export default function StudioPage() {
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
             </svg>
-            History
+            <span>History</span>
           </button>
           <div className="userMenu">
             <button className="userAvatar" type="button" onClick={() => setShowUserMenu((v) => !v)} title="Account">
@@ -1198,7 +1231,7 @@ export default function StudioPage() {
                   </div>
                   <div className="userMenuCredits">
                     <span className="userMenuCreditsLabel">Credit balance</span>
-                    <span className="userMenuCreditsAmount">${creditBalance.toFixed(2)}</span>
+                    <span className="userMenuCreditsAmount">{creditBalance} Credits</span>
                     <button className="userMenuCreditsRefresh" type="button" onClick={(e) => { e.stopPropagation(); loadCredits(); }}>↻</button>
                   </div>
                   <div className="userMenuDivider" />
@@ -1268,27 +1301,48 @@ export default function StudioPage() {
 
           <div className="uploadDivider" />
 
-          <div className="formSectionHead">
-            <p className="eyebrow">Branding</p>
-            <h2>Logo</h2>
-            <p className="sectionDesc">Optional. Used to place your mark on packaging or banner shots.</p>
+          <div className="logoSection" id="logo-section">
+            <div className="formSectionHead">
+              <p className="eyebrow">Branding</p>
+              <h2>Logo</h2>
+              <p className="sectionDesc">Optional. Used to place your mark on packaging or banner shots.</p>
+            </div>
+
+            {logo ? (
+              <div className="logoPreview">
+                <div className="previewImage logoPreviewImage">
+                  <Image src={logo.url} alt={`Preview of ${logo.name}`} fill sizes="72px" unoptimized />
+                </div>
+                <div className="previewMeta"><strong>{logo.name}</strong><span>{logo.size}</span></div>
+                <button className="ghostButton compactButton" type="button" onClick={removeLogo}>Remove</button>
+              </div>
+            ) : (
+              <div className={`dropZone compactDrop${pulseLogoBtn ? " isPulsing" : ""}`}>
+                <input ref={logoInputRef} className="fileInput" type="file" accept="image/*" onChange={handleLogoChange} />
+                <small>No logo uploaded</small>
+                <button
+                  className={`secondaryButton compactButton${pulseLogoBtn ? " isPulsing" : ""}`}
+                  type="button"
+                  onClick={() => logoInputRef.current?.click()}
+                >
+                  Upload logo
+                </button>
+              </div>
+            )}
           </div>
 
-          {logo ? (
-            <div className="logoPreview">
-              <div className="previewImage logoPreviewImage">
-                <Image src={logo.url} alt={`Preview of ${logo.name}`} fill sizes="72px" unoptimized />
-              </div>
-              <div className="previewMeta"><strong>{logo.name}</strong><span>{logo.size}</span></div>
-              <button className="ghostButton compactButton" type="button" onClick={removeLogo}>Remove</button>
+          {images.length > 0 ? (
+            <div id="analyze-trigger">
+              <button
+                className="secondaryButton fullButton"
+                type="button"
+                disabled={isAnalyzing}
+                onClick={() => triggerAnalyze(images)}
+              >
+                {isAnalyzing ? "Analyzing…" : "Analyze Photos"}
+              </button>
             </div>
-          ) : (
-            <div className="dropZone compactDrop">
-              <input ref={logoInputRef} className="fileInput" type="file" accept="image/*" onChange={handleLogoChange} />
-              <small>No logo uploaded</small>
-              <button className="secondaryButton compactButton" type="button" onClick={() => logoInputRef.current?.click()}>Upload logo</button>
-            </div>
-          )}
+          ) : null}
         </section>
 
         <section className="formColumn" id="details" aria-labelledby="details-title">
@@ -1301,37 +1355,52 @@ export default function StudioPage() {
             <button className="ghostButton" type="button" onClick={resetBrief}>Reset</button>
           </div>
 
-          <FormSection eyebrow="Required" title="Product basics">
+          <FormSection id="product-basics-section" eyebrow="Required" title="Product basics">
             <div className="formGrid">
-              <label><span>Product name <span className="requiredMark">*</span></span>
-                <input type="text" value={brief.productName} onChange={(e) => updateBrief("productName", e.target.value)} placeholder="Wireless desk lamp" />
+              <label>
+                <span>
+                  Product name <span className="requiredMark">*</span>
+                  <span className="helpTip">
+                    <button className="helpTipBtn" type="button" tabIndex={0}>?</button>
+                    <span className="helpTipBubble">The exact name buyers will see. Include model/type if relevant — this shapes the AI image context.</span>
+                  </span>
+                </span>
+                <input id="product-name-field" type="text" value={brief.productName} onChange={(e) => updateBrief("productName", e.target.value)} placeholder="Wireless desk lamp" />
               </label>
-              <label><span>Category <span className="requiredMark">*</span></span>
-                <input type="text" list="category-suggestions" value={brief.category}
+              <label>
+                <span>
+                  Category <span className="requiredMark">*</span>
+                  <span className="helpTip">
+                    <button className="helpTipBtn" type="button" tabIndex={0}>?</button>
+                    <span className="helpTipBubble">Helps the AI apply correct lifestyle context and background styling for each marketplace.</span>
+                  </span>
+                </span>
+                <input id="category-field" type="text" list="category-suggestions" value={brief.category}
                   onChange={(e) => updateBrief("category", e.target.value)} placeholder="Electronics, Clothing, Furniture..." />
                 <datalist id="category-suggestions">
                   {CATEGORY_SUGGESTIONS.map((cat) => <option value={cat} key={cat} />)}
                 </datalist>
               </label>
-              <label><span>Brand name</span>
-                <input type="text" value={brief.brandName} onChange={(e) => updateBrief("brandName", e.target.value)} placeholder="Optional if unbranded" />
+              <label>
+                <span>
+                  Brand name
+                  <span className="helpTip">
+                    <button className="helpTipBtn" type="button" tabIndex={0}>?</button>
+                    <span className="helpTipBubble">Optional — used for A+ banner overlays and brand story images.</span>
+                  </span>
+                </span>
+                <input id="brand-name-field" type="text" value={brief.brandName} onChange={(e) => updateBrief("brandName", e.target.value)} placeholder="Optional if unbranded" />
               </label>
               <label><span>SKU</span>
-                <input type="text" value={brief.sku} onChange={(e) => updateBrief("sku", e.target.value)} placeholder="Optional" />
+                <input id="sku-field" type="text" value={brief.sku} onChange={(e) => updateBrief("sku", e.target.value)} placeholder="Optional" />
               </label>
             </div>
           </FormSection>
 
-          <FormSection eyebrow="Required" title="Marketplace & background">
+          <FormSection id="marketplace-section" eyebrow="Required" title="Marketplace & background">
             <CheckGrid legend={<><span className="requiredMark">*</span> Marketplace(s)</>}
               options={MARKETPLACES} values={marketplaces}
-              onToggle={(value) => setMarketplaces((current) => toggleValue(current, value))} columns={4} />
-            {marketplaces.includes("Custom") ? (
-              <label className="inlineField"><span>Custom marketplace</span>
-                <input type="text" value={brief.customMarketplace} onChange={(e) => updateBrief("customMarketplace", e.target.value)}
-                  placeholder="Name your marketplace" />
-              </label>
-            ) : null}
+              onToggle={(value) => setMarketplaces((current) => toggleValue(current, value))} columns={3} />
             <PillGroup legend="Background preference" options={BACKGROUND_OPTIONS}
               value={brief.background} onChange={(value) => updateBrief("background", value)} />
             {brief.background === "Custom Color" ? (
@@ -1346,42 +1415,54 @@ export default function StudioPage() {
             ) : null}
           </FormSection>
 
-          <FormSection eyebrow="Product details" title="Features, color & specs">
-            <ChipInput legend="Key features" hint={`Add ${MIN_FEATURES}–${MAX_FEATURES} points.`}
+          <FormSection id="features-section" eyebrow="Product details" title="Features, color & specs">
+            <ChipInput id="key-features-field" legend="Key features" hint={`Add ${MIN_FEATURES}–${MAX_FEATURES} points.`}
               values={keyFeatures} onAdd={(value) => setKeyFeatures((current) => [...current, value])}
               onRemove={(value) => setKeyFeatures((current) => current.filter((item) => item !== value))}
               placeholder="Type a feature and press Enter" max={MAX_FEATURES} />
-            <ChipInput legend="Product color(s)" values={productColors}
+            <ChipInput id="product-colors-field" legend="Product color(s)" values={productColors}
               onAdd={(value) => setProductColors((current) => [...current, value])}
               onRemove={(value) => setProductColors((current) => current.filter((item) => item !== value))}
               placeholder="Type a color and press Enter" max={MAX_PRODUCT_COLORS} withColorPicker />
             <div className="formGrid">
-              <label><span>Material</span>
+              <label id="material-field"><span>Material</span>
                 <input type="text" value={brief.material} onChange={(e) => updateBrief("material", e.target.value)} placeholder="Optional" />
               </label>
-              <label><span>Dimensions</span>
+              <label id="dimensions-field"><span>Dimensions</span>
                 <input type="text" value={brief.dimensions} onChange={(e) => updateBrief("dimensions", e.target.value)} placeholder="Optional" />
               </label>
-              <label><span>Weight</span>
+              <label id="weight-field"><span>Weight</span>
                 <input type="text" value={brief.weight} onChange={(e) => updateBrief("weight", e.target.value)} placeholder="Optional" />
               </label>
             </div>
           </FormSection>
 
-          <FormSection eyebrow="Branding" title="Brand look & feel">
-            <ChipInput legend="Brand colors" values={brandColors}
+          <FormSection id="branding-section" eyebrow="Branding" title="Brand look & feel">
+            <ChipInput id="brand-colors-field" legend="Brand colors" values={brandColors}
               onAdd={(value) => setBrandColors((current) => [...current, value])}
               onRemove={(value) => setBrandColors((current) => current.filter((item) => item !== value))}
               placeholder="Pick or type a hex color" max={MAX_BRAND_COLORS} withColorPicker />
-            <PillGroup legend="Preferred font style" options={FONT_STYLES}
+            <PillGroup id="font-style-field" legend="Preferred font style" options={FONT_STYLES}
               value={brief.fontStyle} onChange={(value) => updateBrief("fontStyle", value)} />
           </FormSection>
 
+          <FormSection id="custom-prompt-section" eyebrow="Your voice" title="Anything else the AI should know?"
+            description="Type freely — this is added to every image prompt, on top of the fields above.">
+            <label id="custom-prompt-field" className="promptField"><span>Custom prompt</span>
+              <textarea value={brief.customPrompt} onChange={(e) => updateBrief("customPrompt", e.target.value)}
+                placeholder="Keep the original color, add soft shadows, show premium packaging..." rows={4} />
+            </label>
+          </FormSection>
+
           {/* Basic Images */}
-          <FormSection eyebrow="Basic Images" title="Select basic images">
+          <FormSection id="basic-images-section" eyebrow="Basic Images" title="Select basic images">
             <div className="imageTypeSectionHeader">
               <span className="imageTypeBadge basic">Basic</span>
-              <span className="imageTypePrice">$0.15 per image · nano-banana AI</span>
+              <span className="imageTypePrice">{IMAGE_COST.basic} Credit per image · nano-banana AI</span>
+              <span className="helpTip" style={{ marginLeft: "auto" }}>
+                <button className="helpTipBtn" type="button" tabIndex={0}>?</button>
+                <span className="helpTipBubble">Standard listing images for product pages — main shot, angles, lifestyle, and feature infographics.</span>
+              </span>
             </div>
             <CheckGrid legend="Basic image types" options={BASIC_IMAGE_TYPES} values={selectedBasicTypes}
               onToggle={(value) => {
@@ -1390,18 +1471,23 @@ export default function StudioPage() {
           </FormSection>
 
           {/* A+ Listing Images */}
-          <FormSection eyebrow="A+ Listing Images" title="Premium A+ images">
+          <FormSection id="aplus-images-section" eyebrow="A+ Listing Images" title="Premium A+ images">
             <div className="imageTypeSectionHeader">
               <span className="imageTypeBadge aplus">A+ Premium</span>
-              <span className="imageTypePrice">$0.90 per image · GPT Image 2 AI</span>
+              <span className="imageTypePrice">{IMAGE_COST.aplus} Credits per image · GPT Image 2 AI</span>
+              <span className="helpTip" style={{ marginLeft: "auto" }}>
+                <button className="helpTipBtn" type="button" tabIndex={0}>?</button>
+                <span className="helpTipBubble">Rich A+ Content banners for Amazon/Flipkart — high-quality composite images with text overlays.</span>
+              </span>
             </div>
             <div className="aplusImageOptions">
               {APLUS_IMAGE_TYPES.map((type) => (
-                <label key={type.id} className={`aplusImageOption${selectedAplusTypes.includes(type.id) ? " isSelected" : ""}`}>
+                <label key={type.id} className={`aplusImageOption${selectedAplusTypes.includes(type.id) ? " isSelected" : ""}${isTourMode ? " isLocked" : ""}`}>
                   <input
                     type="checkbox"
                     checked={selectedAplusTypes.includes(type.id)}
-                    onChange={() => setSelectedAplusTypes((prev) => toggleValue(prev, type.id))}
+                    disabled={isTourMode}
+                    onChange={() => { if (!isTourMode) setSelectedAplusTypes((prev) => toggleValue(prev, type.id)); }}
                   />
                   <div className="aplusImageOptionContent">
                     <span className="aplusImageOptionLabel">{type.label}</span>
@@ -1415,7 +1501,7 @@ export default function StudioPage() {
             </div>
           </FormSection>
 
-          <FormSection eyebrow="AI preferences" title="Style, text & language">
+          <FormSection id="ai-preferences-section" eyebrow="AI preferences" title="Style, text & language">
             <PillGroup legend="Image style" options={AI_IMAGE_STYLES} value={brief.aiStyle}
               onChange={(value) => updateBrief("aiStyle", value)} />
             <PillGroup legend="Text on image" options={TEXT_ON_IMAGE_OPTIONS} value={brief.textOnImage}
@@ -1424,7 +1510,7 @@ export default function StudioPage() {
               onChange={(value) => updateBrief("language", value)} />
           </FormSection>
 
-          <FormSection eyebrow="Output" title="Quantity, size & format">
+          <FormSection id="output-section" eyebrow="Output" title="Quantity, size & format">
             <div className="formGrid">
               <label><span>Number of variant sets</span>
                 <input type="number" min="1" max="10" value={brief.variantSets}
@@ -1449,7 +1535,7 @@ export default function StudioPage() {
                 <span className="summaryChevron" aria-hidden="true" />
               </summary>
               <div className="optionalContent" style={{ paddingTop: "0.75rem" }}>
-                <div className="formGrid" style={{ gridTemplateColumns: "1fr 1fr 1fr" }}>
+                <div className="formGrid formGridThree">
                   <label><span>Preset</span>
                     <select value={brief.resolution}
                       onChange={(e) => updateBrief("resolution", e.target.value)}
@@ -1515,24 +1601,20 @@ export default function StudioPage() {
                 <textarea value={brief.packageContents} onChange={(e) => updateBrief("packageContents", e.target.value)}
                   placeholder="1 x Product, 1 x USB-C cable, 1 x User manual" rows={2} />
               </label>
-              <label className="promptField"><span>Custom prompt</span>
-                <textarea value={brief.customPrompt} onChange={(e) => updateBrief("customPrompt", e.target.value)}
-                  placeholder="Keep the original color, add soft shadows, show premium packaging..." rows={4} />
-              </label>
             </div>
           </details>
 
-          <aside className="briefPanel" id="brief" aria-label="Current generation brief">
+          <aside className="briefPanel" id="submit-section" aria-label="Generate and submit">
             {/* Cost preview — shown when image types are selected */}
             {(selectedCost.basic > 0 || selectedCost.aplus > 0) && (
               <div className="briefCostRow">
                 <span className="briefCostLabel">
-                  {selectedCost.basic > 0 && `${selectedCost.basic} basic @ $${PRICING.basic.toFixed(2)}`}
+                  {selectedCost.basic > 0 && `${selectedCost.basic} basic @ ${IMAGE_COST.basic}cr`}
                   {selectedCost.basic > 0 && selectedCost.aplus > 0 && " · "}
-                  {selectedCost.aplus > 0 && `${selectedCost.aplus} A+ @ $${PRICING.aplus.toFixed(2)}`}
+                  {selectedCost.aplus > 0 && `${selectedCost.aplus} A+ @ ${IMAGE_COST.aplus}cr`}
                 </span>
                 <span className={`briefCostTotal${canAfford ? "" : " isLow"}`}>
-                  ${selectedCost.total.toFixed(2)}
+                  {selectedCost.total} Credits
                 </span>
               </div>
             )}
@@ -1551,6 +1633,16 @@ export default function StudioPage() {
               <div className="summaryNote"><strong>Customization</strong><p>{brief.customPrompt}</p></div>
             ) : null}
 
+            {formWarnings.length > 0 && (
+              <div className="validationWarning" role="alert">
+                <span className="warnIcon" aria-hidden="true">⚠</span>
+                <span>
+                  {formWarnings.map((w, i) => <span key={i} style={{ display: "block" }}>{w}</span>)}
+                  {!canAfford && <a href="/studio#credits" style={{ color: "#92400e", textDecoration: "underline", fontSize: "0.78rem" }}>Add credits →</a>}
+                </span>
+              </div>
+            )}
+
             <button className="primaryButton fullButton" type="submit"
               disabled={isGenerating || !!validationIssue || isAnalyzing || !canAfford || (selectedBasicTypes.length === 0 && selectedAplusTypes.length === 0)}>
               <span>{isGenerating ? "Generating..." : !canAfford ? "Insufficient credits" : "Generate images"}</span>
@@ -1568,6 +1660,13 @@ export default function StudioPage() {
                 {isGeneratingListing ? <span className="spinner" /> : "📝"}
               </span>
             </button>
+
+            {listings && !isGeneratingListing ? (
+              <button className="ghostButton fullButton compactButton" type="button"
+                onClick={() => setShowListingPanel(true)} style={{ marginTop: "6px" }}>
+                View saved listing text
+              </button>
+            ) : null}
 
             {statusMessage ? <p className="statusMessage">{statusMessage}</p> : null}
           </aside>
@@ -1627,9 +1726,6 @@ export default function StudioPage() {
                       ) : (
                         <div className="historyThumbPlaceholder" style={{ width: "100%", height: "100%" }}>🖼</div>
                       )}
-                      <span className="resultsImageOverlay" aria-hidden="true">
-                        <span>🔍</span>
-                      </span>
                     </button>
                   </div>
                   <div className="resultsTileFooter">
@@ -1646,7 +1742,7 @@ export default function StudioPage() {
                   <>
                     <div className="resultsSectionSubhead">
                       <span>Basic Images</span>
-                      <span className="resultsSubCost">${(basicImages.length * PRICING.basic).toFixed(2)}</span>
+                      <span className="resultsSubCost">{basicImages.length * IMAGE_COST.basic} Credits</span>
                     </div>
                     <div className="resultsGrid">
                       {basicImages.map((img, i) => renderImageTile(img, i))}
@@ -1657,7 +1753,7 @@ export default function StudioPage() {
                   <>
                     <div className="resultsSectionSubhead aplusSubhead">
                       <span>A+ Listing Images (GPT Image 2)</span>
-                      <span className="resultsSubCost">${(aplusImages.length * PRICING.aplus).toFixed(2)}</span>
+                      <span className="resultsSubCost">{aplusImages.length * IMAGE_COST.aplus} Credits</span>
                     </div>
                     <div className="resultsGrid">
                       {aplusImages.map((img, i) => renderImageTile(img, i))}
@@ -1711,5 +1807,6 @@ export default function StudioPage() {
         </div>
       )}
     </main>
+    </OnboardingProvider>
   );
 }

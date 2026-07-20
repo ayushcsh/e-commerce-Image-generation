@@ -5,7 +5,6 @@ export type GenerationBrief = {
   sku: string;
   background: string;
   customBackgroundColor: string;
-  customMarketplace: string;
   material: string;
   dimensions: string;
   weight: string;
@@ -43,10 +42,17 @@ const BACKGROUND_INSTRUCTIONS: Record<string, string> = {
   Gradient: "Use a smooth, soft-color gradient background that complements the product's own colors."
 };
 
+// Appended once to every generated prompt so the seller's free-text direction
+// always reaches the model, regardless of image type.
+function appendCustomDirection(prompt: string, customPrompt: string): string {
+  if (!customPrompt?.trim()) return prompt;
+  return `${prompt}\nSELLER'S CUSTOM DIRECTION (apply on top of everything above, without breaking the required composition/aspect ratio rules): ${customPrompt.trim()}`;
+}
+
 // ── Dedicated per-type prompts for each basic image type ──────────────────────
 // Each image gets its OWN complete prompt — no loops, no shared templates.
 
-export function buildBasicImagePrompt(
+function buildBasicImagePromptCore(
   brief: GenerationBrief,
   imageType: string
 ): string {
@@ -60,7 +66,6 @@ ${brief.keyFeatures.length > 0 ? `KEY FEATURES TO HIGHLIGHT: ${brief.keyFeatures
 ${brief.productColors.length > 0 ? `Product color(s): ${brief.productColors.join(", ")}.` : ""}
 ${brief.material ? `Material: ${brief.material}.` : ""}
 ${brief.targetAudience ? `Target audience: ${brief.targetAudience}.` : ""}
-${brief.customPrompt ? `Seller's direction: ${brief.customPrompt}` : ""}
 FINAL QUALITY: Magazine-cover product shot. This is the #1 image buyers will see — it must look expensive, professional, and trustworthy. Aspect ratio 1:1, output 1280x1280 pixels. NO text, NO watermark, NO logo overlays.`;
   }
 
@@ -73,7 +78,6 @@ SCALE / QUANTITY: ${brief.quantityPerSet && parseInt(brief.quantityPerSet) > 1 ?
 ${brief.keyFeatures.length > 0 ? `FEATURES TO SHOW: ${brief.keyFeatures.join("; ")}.` : ""}
 ${brief.material ? `Material: ${brief.material}. Show the material quality in the visible surfaces.` : ""}
 ${brief.productColors.length > 0 ? `Color(s): ${brief.productColors.join(", ")}.` : ""}
-${brief.customPrompt ? `Additional direction: ${brief.customPrompt}` : ""}
 ASPECT: Slightly landscape (4:3 or 3:2). Output 1280x960 pixels. NO text, NO watermark, NO logo overlays.`;
   }
 
@@ -86,7 +90,6 @@ PRODUCT: Place the product prominently — shown from its most recognizable angl
 ${brief.keyFeatures.length > 0 ? `FEATURES TO HIGHLIGHT:\n${brief.keyFeatures.map((f, i) => `  ${i + 1}. ${f}`).join("\n")}` : "FEATURES: Highlight the product's most compelling selling points with short punchy labels."}
 ${brief.material ? `MATERIAL/CONSTRUCTION note: ${brief.material}.` : ""}
 ${brief.targetAudience ? `Target audience: ${brief.targetAudience}.` : ""}
-${brief.customPrompt ? `Custom direction: ${brief.customPrompt}` : ""}
 STYLE: Clean, professional, editorial. Think high-end product catalog. Aspect ratio 1:1 (1280x1280). NO watermark.`;
   }
 
@@ -111,7 +114,6 @@ PRODUCT: Show the product actively being used or in its natural resting position
 ${brief.material ? `Material: ${brief.material} — show the material quality in context.` : ""}
 ${brief.productColors.length > 0 ? `Product color(s): ${brief.productColors.join(", ")}.` : ""}
 ${brief.targetAudience ? `Target audience mood: ${brief.targetAudience}.` : ""}
-${brief.customPrompt ? `Custom direction: ${brief.customPrompt}` : ""}
 QUALITY: Editorial catalog photography. Aspect ratio 4:3 or 3:2, output 1280x960 pixels. NO watermark, NO logo text overlay.`;
   }
 
@@ -163,19 +165,22 @@ TRUST ELEMENTS to include (shown as clean graphic badges or elegant text callout
   ${brief.specialOffers ? `Offer: ${brief.specialOffers}` : ""}
 STYLE: Warm, trustworthy, premium. Think premium brand lookbook photography — the kind of image that makes a buyer feel confident and proud to own this product. Use warm tones, soft shadows, and editorial composition.
 ATMOSPHERE: ${brief.targetAudience ? `${brief.targetAudience}` : "Professional and aspirational"} mood. Warm lighting. The product feels like it belongs to a quality-conscious brand. Elegant but not cold.
-${brief.customPrompt ? `Custom direction: ${brief.customPrompt}` : ""}
 TYPOGRAPHY: Brand name and warranty info in clean, premium font — minimal text, maximum elegance. Text should feel like a luxury catalog, not a discount ad.
 ASPECT: Portrait (2:3) or square, output 960x1280 or 1280x1280 pixels. NO watermarks.`;
   }
 
   // Fallback
-  return `Professional ecommerce product image. ${brief.productName}${brief.brandName ? ` by ${brief.brandName}` : ""}. Create a clean, marketplace-ready product photo with a pure white studio background. Professional studio lighting with rim highlight. ${brief.keyFeatures.length > 0 ? `Highlight: ${brief.keyFeatures.join(", ")}.` : ""} ${brief.productColors.length > 0 ? `Color(s): ${brief.productColors.join(", ")}.` : ""} ${brief.material ? `Material: ${brief.material}.` : ""} ${brief.customPrompt ? `Direction: ${brief.customPrompt}` : ""} Crisp edges, vivid colors. Output 1280x1280 pixels. NO text, NO watermark.`;
+  return `Professional ecommerce product image. ${brief.productName}${brief.brandName ? ` by ${brief.brandName}` : ""}. Create a clean, marketplace-ready product photo with a pure white studio background. Professional studio lighting with rim highlight. ${brief.keyFeatures.length > 0 ? `Highlight: ${brief.keyFeatures.join(", ")}.` : ""} ${brief.productColors.length > 0 ? `Color(s): ${brief.productColors.join(", ")}.` : ""} ${brief.material ? `Material: ${brief.material}.` : ""} Crisp edges, vivid colors. Output 1280x1280 pixels. NO text, NO watermark.`;
+}
+
+export function buildBasicImagePrompt(brief: GenerationBrief, imageType: string): string {
+  return appendCustomDirection(buildBasicImagePromptCore(brief, imageType), brief.customPrompt);
 }
 
 // ── Dedicated per-type prompts for Amazon A+ Content modules ────────────────────
 // Each module type gets its own perfectly-crafted prompt.
 
-export function buildAplusPrompt(
+function buildAplusPromptCore(
   brief: GenerationBrief,
   imageType: string
 ): string {
@@ -310,7 +315,6 @@ SCENE QUALITY: Editorial catalog photography. Think a premium brand's lifestyle 
 BOTTOM CAPTION BAR: A thin, elegant branded bar across the bottom ~10% of the image height. Background: dark semi-transparent overlay. Text: "${brief.productName}${brief.brandName ? ` — ${brief.brandName}` : ""}" in clean white sans-serif, centered. No more than 5 words total.
 ${brief.keyFeatures.length > 0 ? `In the lifestyle scene, subtly show or imply: ${brief.keyFeatures.slice(0, 2).join(" and ")}.` : ""}
 ${brief.material ? `MATERIAL QUALITY: Show the ${brief.material} material quality clearly in the product's visible surfaces within the scene.` : ""}
-${brief.customPrompt ? `Custom direction: ${brief.customPrompt}` : ""}
 ASPECT: Wide banner 1464×600 pixels (2.44:1 ratio). Do NOT distort or crop. NO watermark, NO AI label.`;
   }
 
@@ -329,7 +333,11 @@ ASPECT: Square 2000×2000 pixels. NO text, NO watermark, NO logo text, NO AI lab
   }
 
   // Fallback for any unlisted types
-  return `You are an expert Amazon A+ Content designer. Create a premium A+ Content image for ${brief.productName}${brief.brandName ? ` by ${brief.brandName}` : ""}. ${brief.keyFeatures.length > 0 ? `Highlight: ${brief.keyFeatures.join(", ")}.` : ""} ${brief.material ? `Material: ${brief.material}.` : ""} ${brief.productColors.length > 0 ? `Colors: ${brief.productColors.join(", ")}.` : ""} ${brief.customPrompt ? `Direction: ${brief.customPrompt}` : ""} Premium editorial style. Keep the product faithful to the reference. Output 1000x1000 pixels. NO watermark, NO AI label.`;
+  return `You are an expert Amazon A+ Content designer. Create a premium A+ Content image for ${brief.productName}${brief.brandName ? ` by ${brief.brandName}` : ""}. ${brief.keyFeatures.length > 0 ? `Highlight: ${brief.keyFeatures.join(", ")}.` : ""} ${brief.material ? `Material: ${brief.material}.` : ""} ${brief.productColors.length > 0 ? `Colors: ${brief.productColors.join(", ")}.` : ""} Premium editorial style. Keep the product faithful to the reference. Output 1000x1000 pixels. NO watermark, NO AI label.`;
+}
+
+export function buildAplusPrompt(brief: GenerationBrief, imageType: string): string {
+  return appendCustomDirection(buildAplusPromptCore(brief, imageType), brief.customPrompt);
 }
 
 const STYLE_INSTRUCTIONS: Record<string, string> = {

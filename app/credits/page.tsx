@@ -4,6 +4,7 @@ import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { Suspense, useEffect, useState } from "react";
 import { signOut } from "next-auth/react";
+import { CREDIT_PLANS, type CreditPlanId } from "@/lib/pricing";
 
 type Transaction = {
   type: string;
@@ -12,30 +13,9 @@ type Transaction = {
   createdAt: string;
 };
 
-const PLANS = [
-  {
-    id: "basic",
-    name: "Basic",
-    priceInr: 699,
-    creditsUsd: 7,
-    features: ["50 credits/month", "Basic image sizes", "Email support"],
-  },
-  {
-    id: "growth",
-    name: "Growth",
-    priceInr: 1299,
-    creditsUsd: 13,
-    badge: "Popular",
-    features: ["100 credits/month", "All A+ Content sizes", "Priority support"],
-  },
-  {
-    id: "enterprise",
-    name: "Enterprise",
-    priceInr: 4999,
-    creditsUsd: 55,
-    features: ["Unlimited credits", "All image sizes", "24/7 support", "Custom integrations"],
-  },
-];
+const PLAN_BADGES: Partial<Record<CreditPlanId, string>> = {
+  growth: "Popular",
+};
 
 function StatusBanners() {
   const [showSuccess, setShowSuccess] = useState(false);
@@ -168,20 +148,20 @@ export default function CreditsPage() {
             <div className="creditsBalanceSkeleton" />
           ) : (
             <div className="creditsBalanceAmount">
-              ₹{(balance * 96).toFixed(0)}
+              {balance} Credits
             </div>
           )}
           <div className="creditsBalanceNote">
             {balance === 0
               ? "No credits"
-              : `≈ $${balance.toFixed(2)} · credits never expire`}
+              : `1 Credit = 1 basic image · 5 Credits = 1 A+ image · credits never expire`}
           </div>
         </div>
 
         {/* Free credits */}
         <div className="creditsFreeBanner">
           <div>
-            <strong>Claim ₹100 free</strong>
+            <strong>Claim 10 free credits</strong>
             <p>Test the platform — no card needed.</p>
           </div>
           <button
@@ -197,26 +177,27 @@ export default function CreditsPage() {
         <div className="creditsPlans">
           <p className="creditsSectionTitle">Plans</p>
           <div className="creditsPlanList">
-            {PLANS.map((plan) => (
-              <div key={plan.id} className="creditsPlanRow">
+            {(Object.entries(CREDIT_PLANS) as [CreditPlanId, typeof CREDIT_PLANS[CreditPlanId]][]).map(([id, plan]) => (
+              <div key={id} className="creditsPlanRow">
                 <div className="creditsPlanInfo">
                   <div className="creditsPlanName">
                     {plan.name}
-                    {plan.badge && (
-                      <span className="creditsPlanBadge">{plan.badge}</span>
+                    {PLAN_BADGES[id] && (
+                      <span className="creditsPlanBadge">{PLAN_BADGES[id]}</span>
                     )}
                   </div>
                   <div className="creditsPlanSub">
-                    {plan.creditsUsd} credits · {plan.features[0]}
+                    {plan.credits} credits
+                    {plan.bonus > 0 && ` (${plan.bonus} bonus)`}
                   </div>
                 </div>
                 <div className="creditsPlanAmount">₹{plan.priceInr.toLocaleString()}</div>
                 <button
                   className="creditsPlanBtn"
-                  onClick={() => buyPlan(plan.id)}
-                  disabled={buyingPlan === plan.id}
+                  onClick={() => buyPlan(id)}
+                  disabled={buyingPlan === id}
                 >
-                  {buyingPlan === plan.id ? "..." : "Buy"}
+                  {buyingPlan === id ? "..." : "Buy"}
                 </button>
               </div>
             ))}
@@ -241,7 +222,7 @@ export default function CreditsPage() {
                     </div>
                   </div>
                   <div className={`creditsHistoryAmount${tx.amount > 0 ? " isPositive" : ""}`}>
-                    {tx.amount > 0 ? "+" : "−"}${Math.abs(tx.amount).toFixed(2)}
+                    {tx.amount > 0 ? "+" : "−"}{Math.abs(tx.amount)} Credits
                   </div>
                 </div>
               ))}

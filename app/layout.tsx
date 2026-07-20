@@ -3,7 +3,7 @@ import "./globals.css";
 import Providers from "./providers";
 
 export const metadata: Metadata = {
-  title: "AI Product Image Generator",
+  title: "VendorFlow — AI Product Image Generator",
   description:
     "AI product image generation for ecommerce vendors and marketplace sellers."
 };

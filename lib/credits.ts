@@ -5,7 +5,8 @@ const COLLECTION = "userCredits";
 export type UserCredit = {
   _id?: string;
   userId: string;
-  balance: number; // in dollars (USD)
+  balance: number; // integer credits — 1 basic image = 1 credit
+  welcomeBonusShown?: boolean;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -64,6 +65,55 @@ export async function setUserCredits(userId: string, balance: number, descriptio
     description,
     createdAt: new Date(),
   });
+}
+
+/**
+ * Grants the one-time 1-credit welcome bonus for a brand-new account. Safe to
+ * call from both the credentials register route and the OAuth createUser
+ * event — the upsert only inserts once per userId, so a second call is a
+ * no-op and never re-grants or resets an existing balance.
+ */
+export async function grantWelcomeBonusIfNew(userId: string): Promise<boolean> {
+  const db = await getDb();
+  const result = await db.collection<UserCredit>(COLLECTION).updateOne(
+    { userId },
+    {
+      $setOnInsert: {
+        userId,
+        balance: 1,
+        welcomeBonusShown: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    },
+    { upsert: true }
+  );
+
+  const granted = result.upsertedCount > 0;
+  if (granted) {
+    await db.collection<CreditTransaction>("creditTransactions").insertOne({
+      userId,
+      type: "grant",
+      amount: 1,
+      description: "Welcome bonus: 1 free credit",
+      createdAt: new Date(),
+    });
+  }
+  return granted;
+}
+
+/**
+ * Atomically flips welcomeBonusShown from false to true and reports whether
+ * this call was the one that flipped it — so the client-side popup fires
+ * exactly once, even across reloads or multiple devices.
+ */
+export async function consumeWelcomePopupFlag(userId: string): Promise<boolean> {
+  const db = await getDb();
+  const result = await db.collection<UserCredit>(COLLECTION).findOneAndUpdate(
+    { userId, welcomeBonusShown: false },
+    { $set: { welcomeBonusShown: true } }
+  );
+  return !!result;
 }
 
 /**
@@ -128,7 +178,7 @@ export async function chargeUserCredits(
   if (user.balance < amount) {
     return {
       success: false,
-      error: `Insufficient credits. Need $${amount.toFixed(2)} but have $${user.balance.toFixed(2)}.`,
+      error: `Insufficient credits. Need ${amount} but have ${user.balance}.`,
     };
   }
 
@@ -164,9 +214,3 @@ export async function getTransactionHistory(
     .toArray();
   return txns;
 }
-
-// Pricing constants
-export const PRICING = {
-  basic: 0.15,    // $0.15 per basic image (nano-banana)
-  aplus: 0.90,     // $0.90 per A+ listing image (GPT Image 2)
-} as const;
