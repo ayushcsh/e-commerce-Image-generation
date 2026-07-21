@@ -52,7 +52,6 @@ export default function CreditsPage() {
   const [balance, setBalance] = useState<number>(0);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
-  const [claiming, setClaiming] = useState(false);
   const [buyingPlan, setBuyingPlan] = useState<string | null>(null);
 
   useEffect(() => {
@@ -65,28 +64,6 @@ export default function CreditsPage() {
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
-
-  async function claimFreeCredits() {
-    setClaiming(true);
-    try {
-      const res = await fetch("/api/credits/test-grant", { method: "POST" });
-      const data = await res.json();
-      if (data.success) {
-        setBalance(data.balance);
-        setTransactions((prev) => [
-          {
-            type: "grant",
-            amount: 10,
-            description: "Free trial credits",
-            createdAt: new Date().toISOString(),
-          },
-          ...prev,
-        ]);
-      }
-    } finally {
-      setClaiming(false);
-    }
-  }
 
   async function buyPlan(planId: string) {
     setBuyingPlan(planId);
@@ -156,21 +133,6 @@ export default function CreditsPage() {
               ? "No credits"
               : `1 Credit = 1 basic image · 5 Credits = 1 A+ image · credits never expire`}
           </div>
-        </div>
-
-        {/* Free credits */}
-        <div className="creditsFreeBanner">
-          <div>
-            <strong>Claim 10 free credits</strong>
-            <p>Test the platform — no card needed.</p>
-          </div>
-          <button
-            className="creditsFreeBannerBtn"
-            onClick={claimFreeCredits}
-            disabled={claiming}
-          >
-            {claiming ? "..." : "Claim free"}
-          </button>
         </div>
 
         {/* Plans */}

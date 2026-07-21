@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, DeleteObjectsCommand } from "@aws-sdk/client-s3";
 
 function getR2Config() {
   const accountId = process.env.R2_ACCOUNT_ID;
@@ -58,6 +58,34 @@ export async function uploadToR2(
   } catch (err) {
     const msg = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
     console.error(`[R2] Upload FAILED: ${msg}`);
+    throw err;
+  }
+}
+
+/** Delete one or more objects from R2 by key. No-op if `keys` is empty. */
+export async function deleteFromR2(keys: string[]): Promise<void> {
+  if (keys.length === 0) return;
+
+  const { bucketName } = getR2Config();
+  const client = createR2Client();
+
+  console.log(`[R2] Deleting ${keys.length} key(s) from bucket="${bucketName}"`);
+
+  try {
+    // DeleteObjectsCommand accepts at most 1000 keys per request.
+    for (let i = 0; i < keys.length; i += 1000) {
+      const batch = keys.slice(i, i + 1000);
+      await client.send(
+        new DeleteObjectsCommand({
+          Bucket: bucketName,
+          Delete: { Objects: batch.map((Key) => ({ Key })) },
+        })
+      );
+    }
+    console.log(`[R2] Delete success: ${keys.length} key(s)`);
+  } catch (err) {
+    const msg = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+    console.error(`[R2] Delete FAILED: ${msg}`);
     throw err;
   }
 }

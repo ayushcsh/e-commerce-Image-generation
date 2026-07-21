@@ -1,5 +1,9 @@
 import { ObjectId } from "mongodb";
 import clientPromise from "@/lib/mongodb";
+import { deleteFromR2 } from "@/lib/cloudflare";
+
+/** How many most-recent generations to keep per user; older ones are pruned. */
+const HISTORY_RETENTION_LIMIT = 5;
 
 export type GenerationImageRecord = {
   _id: ObjectId;
@@ -96,6 +100,35 @@ export async function saveGenerationListings(id: string, userId: string, listing
     .updateOne({ _id: new ObjectId(id), userId }, { $set: { listings } });
 
   return result.matchedCount > 0;
+}
+
+/**
+ * Keep only the most recent HISTORY_RETENTION_LIMIT generations for a user;
+ * delete the rest, including their images from R2.
+ */
+export async function pruneOldGenerations(userId: string): Promise<void> {
+  const db = await getDb();
+
+  const stale = await db
+    .collection<GenerationRecord>("generations")
+    .find({ userId }, { projection: { _id: 1 } })
+    .sort({ createdAt: -1 })
+    .skip(HISTORY_RETENTION_LIMIT)
+    .toArray();
+
+  if (stale.length === 0) return;
+
+  const staleIds = stale.map((doc) => doc._id);
+
+  const staleImages = await db
+    .collection<GenerationImageRecord>("generationImages")
+    .find({ generationId: { $in: staleIds } }, { projection: { storageKey: 1 } })
+    .toArray();
+
+  await deleteFromR2(staleImages.map((image) => image.storageKey));
+
+  await db.collection("generationImages").deleteMany({ generationId: { $in: staleIds } });
+  await db.collection("generations").deleteMany({ _id: { $in: staleIds } });
 }
 
 export async function getGenerationForUser(id: string, userId: string) {

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { createGeneration, saveGenerationListings } from "@/lib/generations";
+import { createGeneration, saveGenerationListings, pruneOldGenerations } from "@/lib/generations";
 
 export type MarketplaceListing = {
   title: string;
@@ -236,12 +236,26 @@ export async function POST(request: Request) {
       meesho: { title: "", description: "", highlights: [] }
     };
 
+    const failedMarketplaces: string[] = [];
+
     marketplacesToGenerate.forEach((marketplace, index) => {
       const result = results[index];
       if (result.status === "fulfilled") {
         (allListings as unknown as Record<string, MarketplaceListing>)[marketplace] = result.value;
+      } else {
+        failedMarketplaces.push(marketplace);
+        console.error(`Listing generation failed for ${marketplace}:`, result.reason);
       }
     });
+
+    // If every requested marketplace failed (e.g. the AI provider is down or
+    // out of quota), surface that as a real error instead of silently
+    // returning empty listings with a 200.
+    if (failedMarketplaces.length === marketplacesToGenerate.length) {
+      const reason = results[0]?.status === "rejected" ? results[0].reason : undefined;
+      const detail = reason instanceof Error ? reason.message : "The AI provider did not return a result.";
+      return NextResponse.json({ error: `Listing generation failed for all marketplaces. ${detail}` }, { status: 502 });
+    }
 
     // Persist the listing text so it shows up alongside images in history.
     // Attach to the existing generation (images already made) if one was passed in,
@@ -265,11 +279,12 @@ export async function POST(request: Request) {
           listings: allListings,
         });
       }
+      pruneOldGenerations(session.user.id).catch((err) => console.error("[listing] prune old generations failed:", err));
     } catch (err) {
       console.error("Listing save error:", err);
     }
 
-    return NextResponse.json({ ...allListings, id: savedGenerationId });
+    return NextResponse.json({ ...allListings, id: savedGenerationId, failedMarketplaces });
   } catch (error) {
     console.error("Listing generation error:", error);
     const message = error instanceof Error ? error.message : "Listing generation failed.";

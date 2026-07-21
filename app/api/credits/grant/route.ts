@@ -3,9 +3,12 @@ import { auth } from "@/auth";
 import { getUserCredits, setUserCredits } from "@/lib/credits";
 
 export async function POST(request: NextRequest) {
-  // Simple admin check via header for now (replace with proper admin auth in production)
+  if (!process.env.ADMIN_SECRET) {
+    return NextResponse.json({ error: "Admin endpoint not configured." }, { status: 503 });
+  }
+
   const adminKey = request.headers.get("x-admin-key");
-  if (adminKey !== process.env.ADMIN_SECRET && adminKey !== "test-admin-key") {
+  if (adminKey !== process.env.ADMIN_SECRET) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 403 });
   }
 

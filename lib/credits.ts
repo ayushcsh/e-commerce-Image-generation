@@ -162,6 +162,12 @@ export async function addUserCredits(
   return { newBalance: updated?.balance ?? amount, alreadyProcessed: false };
 }
 
+/**
+ * Atomically deducts credits, guarded by the balance check in the same
+ * update — concurrent charges for the same user can't both read a stale
+ * balance and both succeed (the old read-then-write version had exactly
+ * that lost-update race).
+ */
 export async function chargeUserCredits(
   userId: string,
   amount: number,
@@ -170,24 +176,19 @@ export async function chargeUserCredits(
 ): Promise<{ success: boolean; error?: string; newBalance?: number }> {
   const db = await getDb();
 
-  const user = await db.collection<UserCredit>(COLLECTION).findOne({ userId });
-  if (!user) {
-    return { success: false, error: "No credit account found." };
-  }
+  const updated = await db.collection<UserCredit>(COLLECTION).findOneAndUpdate(
+    { userId, balance: { $gte: amount } },
+    { $inc: { balance: -amount }, $set: { updatedAt: new Date() } },
+    { returnDocument: "after" }
+  );
 
-  if (user.balance < amount) {
+  if (!updated) {
+    const current = await db.collection<UserCredit>(COLLECTION).findOne({ userId });
     return {
       success: false,
-      error: `Insufficient credits. Need ${amount} but have ${user.balance}.`,
+      error: `Insufficient credits. Need ${amount} but have ${current?.balance ?? 0}.`,
     };
   }
-
-  const newBalance = user.balance - amount;
-
-  await db.collection<UserCredit>(COLLECTION).updateOne(
-    { userId },
-    { $set: { balance: newBalance, updatedAt: new Date() } }
-  );
 
   await db.collection<CreditTransaction>("creditTransactions").insertOne({
     userId,
@@ -198,7 +199,34 @@ export async function chargeUserCredits(
     createdAt: new Date(),
   });
 
-  return { success: true, newBalance };
+  return { success: true, newBalance: updated.balance };
+}
+
+/**
+ * Gives back credits for a charge that didn't ultimately deliver (e.g. the
+ * AI provider call failed after credits were already reserved).
+ */
+export async function refundUserCredits(
+  userId: string,
+  amount: number,
+  description: string,
+  generationId?: string
+): Promise<void> {
+  const db = await getDb();
+
+  await db.collection<UserCredit>(COLLECTION).updateOne(
+    { userId },
+    { $inc: { balance: amount }, $set: { updatedAt: new Date() } }
+  );
+
+  await db.collection<CreditTransaction>("creditTransactions").insertOne({
+    userId,
+    type: "refund",
+    amount,
+    description,
+    generationId,
+    createdAt: new Date(),
+  });
 }
 
 export async function getTransactionHistory(

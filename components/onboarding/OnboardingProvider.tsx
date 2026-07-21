@@ -234,6 +234,46 @@ const TOUR_STEPS: Array<{
     targetId: "submit-section",
     title: "Generate your images",
     description: "Hit 'Generate images' and our AI will create professional, marketplace-ready product visuals.",
+    waitFor: () => document.getElementById("results") !== null,
+  },
+  {
+    step: "generating-images",
+    targetId: "results",
+    title: "Generating your images",
+    description: "The AI is creating your marketplace-ready image set — this can take a minute for larger batches.",
+    waitFor: () => {
+      const stillLoading = document.querySelectorAll(".resultsTileLoading").length > 0;
+      const hasReal = document.querySelectorAll(".resultsTile:not(.resultsTileLoading)").length > 0;
+      return hasReal && !stillLoading;
+    },
+  },
+  {
+    step: "generated-output",
+    targetId: "results",
+    title: "Your images are ready!",
+    description: "Click any image to preview it full-size, download individually, or grab the whole set as a ZIP.",
+    waitFor: () => false,
+  },
+  {
+    step: "generate-listing",
+    targetId: "generate-listing-btn",
+    title: "Generate marketplace listing text",
+    description: "Optional — get an AI-written title, bullet points, and description to go with your images.",
+    nextLabel: "Skip — optional",
+    waitFor: () => document.querySelector(".listingPanelOverlay") !== null,
+  },
+  {
+    step: "listing-output",
+    targetId: "listing-output-panel",
+    title: "Your listing text is ready",
+    description: "Copy the AI-written title, bullets, and description straight into your marketplace listing.",
+    waitFor: () => false,
+  },
+  {
+    step: "history",
+    targetId: "history-toggle-btn",
+    title: "Find it again later",
+    description: "Every generation is saved here — reopen past image sets and listing text anytime, no need to redo the work.",
     waitFor: () => false,
   },
 ];
@@ -497,7 +537,7 @@ export default function OnboardingProvider({ children, tourMode = false }: Onboa
           showContinue={showContinue}
           nextLabel={showContinue && currentConfig.step === "logo" ? "Continue" : currentConfig.nextLabel}
           nextDisabled={!!currentConfig.requiresField && !showContinue}
-          hideNext={currentConfig.step === "processing"}
+          hideNext={currentConfig.step === "processing" || currentConfig.step === "generating-images"}
           onContinue={goNext}
           onNext={goNext}
           onPrev={goBack}
@@ -505,9 +545,11 @@ export default function OnboardingProvider({ children, tourMode = false }: Onboa
           onFinish={finishTour}
           isTourMode={isTourMode}
           onRestartTour={() => {
-            // Restart: clear completion flag, exit tour mode so it never shows again
+            // Restart: clear completion flag and re-lock A+/basic selection
+            // (isTourMode must stay true, otherwise the restarted tour would
+            // run with those restrictions silently disabled).
             setCompleted(false);
-            setIsTourMode(false);
+            setIsTourMode(true);
             setTourActive(false);
             setShowWelcome(true);
           }}

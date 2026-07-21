@@ -136,7 +136,17 @@ export default function TourTooltip({
       }
 
       const el = document.getElementById(targetId);
-      if (!el) return;
+      if (!el) {
+        // Target doesn't exist (e.g. a skippable step whose result never
+        // mounted) — fall back to a plain centered dialog instead of leaving
+        // the previous step's spotlight hole stuck on screen.
+        tip.style.top = "50%";
+        tip.style.left = "50%";
+        tip.style.transform = "translate(-50%, -50%)";
+        tip.style.position = "fixed";
+        setHoleRect(null);
+        return;
+      }
 
       // Cut an actual hole in the dim overlay around the target (rendered as
       // 4 separate rectangular bands, see below), instead of trying to make

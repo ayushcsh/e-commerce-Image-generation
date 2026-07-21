@@ -2,9 +2,9 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { generateProductImage, generateAplusImage, uploadReferenceImages, type ReferenceImage } from "@/lib/fal";
 import { buildImagePrompt, buildAplusPrompt, type GenerationBrief } from "@/lib/prompts";
-import { createGeneration } from "@/lib/generations";
+import { createGeneration, pruneOldGenerations } from "@/lib/generations";
 import { uploadToR2 } from "@/lib/cloudflare";
-import { chargeUserCredits, getUserCredits } from "@/lib/credits";
+import { chargeUserCredits, refundUserCredits } from "@/lib/credits";
 import { IMAGE_COST } from "@/lib/pricing";
 import { randomUUID } from "crypto";
 
@@ -97,15 +97,24 @@ export async function POST(request: Request) {
   const basicCost = basicTypes.length * IMAGE_COST.basic;
   const aplusCost = aplusTypes.length * IMAGE_COST.aplus;
   const totalCost = basicCost + aplusCost;
+  const chargeDesc = `${basicTypes.length} basic @ ${IMAGE_COST.basic} + ${aplusTypes.length} A+ @ ${IMAGE_COST.aplus}`;
 
-  // Check credits
-  const credits = await getUserCredits(userId);
-  const balance = credits?.balance ?? 0;
+  const generationId = randomUUID();
 
-  if (balance < totalCost) {
+  // Reserve credits atomically before doing any expensive work — this is
+  // the guard against double-spend: concurrent requests can't both pass a
+  // stale balance check, since the deduction and the check happen in the
+  // same atomic database operation.
+  const chargeResult = await chargeUserCredits(
+    userId,
+    totalCost,
+    `Image generation: ${chargeDesc}`,
+    generationId
+  );
+
+  if (!chargeResult.success) {
     return NextResponse.json({
-      error: `Insufficient credits. Need ${totalCost} (${basicTypes.length} basic @ ${IMAGE_COST.basic} + ${aplusTypes.length} A+ @ ${IMAGE_COST.aplus}), but have ${balance}.`,
-      balance,
+      error: chargeResult.error ?? "Insufficient credits.",
       totalCost,
       required: totalCost,
       pricing: IMAGE_COST,
@@ -121,10 +130,10 @@ export async function POST(request: Request) {
       }))
     );
   } catch {
+    await refundUserCredits(userId, totalCost, `Refund: could not read uploaded photos (${chargeDesc})`, generationId);
     return NextResponse.json({ error: "Could not read uploaded photos." }, { status: 400 });
   }
 
-  const generationId = randomUUID();
   const storagePrefix = `${userId}/${generationId}`;
 
   let images: Array<{ type: string; mimeType: string; storageKey: string; url: string; data: string; isAplus: boolean; width: number; height: number }> = [];
@@ -216,17 +225,10 @@ export async function POST(request: Request) {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error("[generate] FAILED:", message);
+    await refundUserCredits(userId, totalCost, `Refund: generation failed (${chargeDesc})`, generationId)
+      .catch((err) => console.error("[generate] refund failed:", err));
     return NextResponse.json({ error: message }, { status: 502 });
   }
-
-  // Charge credits
-  const chargeDesc = `${basicTypes.length} basic @ ${IMAGE_COST.basic} + ${aplusTypes.length} A+ @ ${IMAGE_COST.aplus}`;
-  const chargeResult = await chargeUserCredits(
-    userId,
-    totalCost,
-    `Image generation: ${chargeDesc}`,
-    generationId
-  );
 
   // Save to MongoDB
   let id: string | null = null;
@@ -239,6 +241,7 @@ export async function POST(request: Request) {
       background: brief.background,
       images,
     });
+    pruneOldGenerations(userId).catch((err) => console.error("[generate] prune old generations failed:", err));
   } catch (err) {
     console.error("[generate] MongoDB save error:", err);
   }
@@ -248,6 +251,6 @@ export async function POST(request: Request) {
     images,
     generationId,
     creditsUsed: totalCost,
-    newBalance: chargeResult.newBalance ?? balance,
+    newBalance: chargeResult.newBalance,
   });
 }

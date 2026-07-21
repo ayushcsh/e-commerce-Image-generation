@@ -6,10 +6,12 @@ import { setUserCredits } from "@/lib/credits";
 // Call: POST /api/admin/grant-email with body: { email: "...", amount: 10, description: "..." }
 // Header: x-admin-key: <ADMIN_SECRET from env>
 export async function POST(request: NextRequest) {
-  const adminKey = request.headers.get("x-admin-key");
-  const expectedKey = process.env.ADMIN_SECRET || "kriscel-admin-secret-2024";
+  if (!process.env.ADMIN_SECRET) {
+    return NextResponse.json({ error: "Admin endpoint not configured." }, { status: 503 });
+  }
 
-  if (adminKey !== expectedKey) {
+  const adminKey = request.headers.get("x-admin-key");
+  if (adminKey !== process.env.ADMIN_SECRET) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 403 });
   }
 

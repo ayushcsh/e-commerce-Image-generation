@@ -24,7 +24,7 @@ import {
   type BriefForExport
 } from "@/lib/export";
 import { IMAGE_COST } from "@/lib/pricing";
-import OnboardingProvider, { useTourContext } from "@/components/onboarding/OnboardingProvider";
+import OnboardingProvider, { useTourContext, resetVendorOnboarding } from "@/components/onboarding/OnboardingProvider";
 import CreditWelcomeModal from "@/components/onboarding/CreditWelcomeModal";
 
 type UploadedImage = {
@@ -274,8 +274,8 @@ function PillGroup({ legend, options, value, onChange, id }: {
   );
 }
 
-function CheckGrid({ legend, hint, options, values, onToggle, columns = 3 }: {
-  legend: ReactNode; hint?: string; options: string[]; values: string[]; onToggle: (v: string) => void; columns?: number;
+function CheckGrid({ legend, hint, options, values, onToggle, columns = 3, disabled = false }: {
+  legend: ReactNode; hint?: string; options: string[]; values: string[]; onToggle: (v: string) => void; columns?: number; disabled?: boolean;
 }) {
   return (
     <fieldset className="checkFieldset">
@@ -283,8 +283,13 @@ function CheckGrid({ legend, hint, options, values, onToggle, columns = 3 }: {
       {hint ? <p className="fieldHint">{hint}</p> : null}
       <div className="checkGrid" style={{ "--cols": columns } as CSSProperties}>
         {options.map((option) => (
-          <label className="checkOption" key={option}>
-            <input type="checkbox" checked={values.includes(option)} onChange={() => onToggle(option)} />
+          <label className={`checkOption${disabled ? " isLocked" : ""}`} key={option}>
+            <input
+              type="checkbox"
+              checked={values.includes(option)}
+              disabled={disabled}
+              onChange={() => { if (!disabled) onToggle(option); }}
+            />
             <span>{option}</span>
           </label>
         ))}
@@ -404,7 +409,7 @@ function ListingPanel({ listings, brief, onClose }: {
   const current = listings[activeTab];
 
   return (
-    <div className="listingPanelOverlay">
+    <div className="listingPanelOverlay" id="listing-output-panel">
       <div className="listingPanel listingPanelWide">
         <div className="listingPanelHeader">
           <div>
@@ -512,8 +517,8 @@ function ListingPanel({ listings, brief, onClose }: {
 
           {!current.title && !current.description && (
             <div className="listingEmpty">
-              <p>No listing content generated for {activeTab}.</p>
-              <small>Make sure {activeTab} is selected in your Marketplace options above.</small>
+              <p>No listing content for {activeTab}.</p>
+              <small>Either this marketplace wasn't selected when you generated, or the AI provider failed for it — try Generate Listing Text again.</small>
             </div>
           )}
         </div>
@@ -546,10 +551,14 @@ export default function StudioPage() {
 
   const { isTourMode } = useTourContext();
 
-  // Pre-select one basic image type and lock A+ during onboarding tour
+  // Pre-select exactly one basic image type and lock A+ during the
+  // onboarding tour — forces the selection every time tour mode turns on
+  // (not just when empty), so a restart can't leave stale extra selections
+  // picked while briefly unlocked.
   useEffect(() => {
-    if (isTourMode && selectedBasicTypes.length === 0) {
+    if (isTourMode) {
       setSelectedBasicTypes(["Main Product (White Background)"]);
+      setSelectedAplusTypes([]);
     }
   }, [isTourMode]);
   const [keyFeatures, setKeyFeatures] = useState<string[]>([]);
@@ -899,15 +908,39 @@ export default function StudioPage() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    const warnings: string[] = [];
-    if (images.length === 0) warnings.push("Add at least one product photo.");
-    if (!brief.productName.trim()) warnings.push("Add a product name.");
-    if (!brief.category.trim()) warnings.push("Add a product category.");
-    if (marketplaces.length === 0) warnings.push("Select at least one marketplace.");
-    if (selectedBasicTypes.length === 0 && selectedAplusTypes.length === 0) warnings.push("Pick at least one image type.");
+    const requiredChecks: Array<{ bad: boolean; message: string; targetId: string }> = [
+      { bad: images.length === 0, message: "Add at least one product photo.", targetId: "photos" },
+      { bad: !brief.productName.trim(), message: "Add a product name.", targetId: "product-name-field" },
+      { bad: !brief.category.trim(), message: "Add a product category.", targetId: "category-field" },
+      { bad: marketplaces.length === 0, message: "Select at least one marketplace.", targetId: "marketplace-section" },
+      { bad: selectedBasicTypes.length === 0 && selectedAplusTypes.length === 0, message: "Pick at least one image type.", targetId: "basic-images-section" },
+    ];
+
+    const warnings = requiredChecks.filter((c) => c.bad).map((c) => c.message);
     if (!canAfford) warnings.push(`Insufficient credits — need ${selectedCost.total}, have ${creditBalance}.`);
 
-    if (warnings.length > 0) { setFormWarnings(warnings); return; }
+    if (warnings.length > 0) {
+      setFormWarnings(warnings);
+
+      // Jump the user straight to the first thing that needs fixing instead
+      // of leaving them to hunt for it in a long form.
+      const firstBad = requiredChecks.find((c) => c.bad);
+      const targetId = firstBad ? firstBad.targetId : (!canAfford ? "submit-section" : null);
+      const el = targetId ? document.getElementById(targetId) : null;
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        const focusable = (
+          el.matches("input, textarea")
+            ? el
+            : el.querySelector<HTMLElement>("input, textarea")
+        );
+        focusable?.focus({ preventScroll: true });
+        el.classList.add("fieldFlash");
+        setTimeout(() => el.classList.remove("fieldFlash"), 1200);
+      }
+
+      return;
+    }
     setFormWarnings([]);
 
     setIsGenerating(true);
@@ -967,14 +1000,23 @@ export default function StudioPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ brief: payload, generationId: currentGenerationId })
       });
-      const { id: savedId, ...result } = await response.json();
+      const { id: savedId, failedMarketplaces, ...result } = await response.json();
       if (!response.ok) throw new Error((result as { error?: string }).error || "Listing generation failed.");
       setListings(result as AllListings);
       setShowListingPanel(true);
       setStatusMessage("");
       if (savedId) setCurrentGenerationId(savedId);
       loadHistory();
-      addNotification({ type: "success", message: "✓ Listings generated for all marketplaces — saved to history!" });
+
+      const failed = (failedMarketplaces as string[] | undefined) ?? [];
+      if (failed.length > 0) {
+        addNotification({
+          type: "error",
+          message: `⚠ Couldn't generate a listing for ${failed.join(", ")} — the AI provider failed for that marketplace. The others were saved.`,
+        });
+      } else {
+        addNotification({ type: "success", message: "✓ Listings generated for all marketplaces — saved to history!" });
+      }
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : "Listing generation failed.");
     } finally {
@@ -1207,6 +1249,15 @@ export default function StudioPage() {
         </Link>
         <div className="studioTopActions">
           <button
+            className="devRestartTourBtn"
+            type="button"
+            onClick={() => resetVendorOnboarding()}
+            title="Restart tour (dev)"
+          >
+            Restart tour (dev)
+          </button>
+          <button
+            id="history-toggle-btn"
             className={`historyToggleBtn${showHistory ? " isActive" : ""}`}
             type="button"
             onClick={() => { setShowHistory((v) => !v); if (!showHistory) loadHistory(); }}
@@ -1243,10 +1294,6 @@ export default function StudioPage() {
                   <button className="userMenuItem" type="button" onClick={() => { setShowUserMenu(false); loadHistory(); setShowHistory(true); }}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                     Generation History
-                  </button>
-                  <button className="userMenuItem" type="button" onClick={() => { setShowUserMenu(false); }}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-                    Settings
                   </button>
                   <div className="userMenuDivider" />
                   <button className="userMenuItem userMenuSignout" type="button" onClick={() => signOut({ redirectTo: "/" })}>
@@ -1466,8 +1513,16 @@ export default function StudioPage() {
             </div>
             <CheckGrid legend="Basic image types" options={BASIC_IMAGE_TYPES} values={selectedBasicTypes}
               onToggle={(value) => {
+                const isRemoving = selectedBasicTypes.includes(value);
+                if (!isRemoving) {
+                  const nextCost = (selectedBasicTypes.length + 1) * IMAGE_COST.basic + selectedAplusTypes.length * IMAGE_COST.aplus;
+                  if (nextCost > creditBalance) {
+                    addNotification({ type: "error", message: `Insufficient credits — this would need ${nextCost}, you have ${creditBalance}.` });
+                    return;
+                  }
+                }
                 setSelectedBasicTypes((prev) => toggleValue(prev, value));
-              }} columns={2} />
+              }} columns={2} disabled={isTourMode} />
           </FormSection>
 
           {/* A+ Listing Images */}
@@ -1487,7 +1542,18 @@ export default function StudioPage() {
                     type="checkbox"
                     checked={selectedAplusTypes.includes(type.id)}
                     disabled={isTourMode}
-                    onChange={() => { if (!isTourMode) setSelectedAplusTypes((prev) => toggleValue(prev, type.id)); }}
+                    onChange={() => {
+                      if (isTourMode) return;
+                      const isRemoving = selectedAplusTypes.includes(type.id);
+                      if (!isRemoving) {
+                        const nextCost = selectedBasicTypes.length * IMAGE_COST.basic + (selectedAplusTypes.length + 1) * IMAGE_COST.aplus;
+                        if (nextCost > creditBalance) {
+                          addNotification({ type: "error", message: `Insufficient credits — this would need ${nextCost}, you have ${creditBalance}.` });
+                          return;
+                        }
+                      }
+                      setSelectedAplusTypes((prev) => toggleValue(prev, type.id));
+                    }}
                   />
                   <div className="aplusImageOptionContent">
                     <span className="aplusImageOptionLabel">{type.label}</span>
@@ -1652,6 +1718,7 @@ export default function StudioPage() {
             </button>
 
             <button className="secondaryButton fullButton" type="button"
+              id="generate-listing-btn"
               onClick={handleGenerateListing}
               disabled={isGeneratingListing || !brief.productName.trim() || isGenerating || isAnalyzing}
               style={{ marginTop: "8px" }}>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
@@ -380,14 +380,7 @@ export default function Home() {
             </span>
           </p>
 
-          <div className="pathway" aria-label="Five step product image workflow">
-            <svg className="pathwayLine" viewBox="0 0 640 2960" preserveAspectRatio="none" aria-hidden="true">
-              <path className="pathwayTrack" d="M520 296 C520 592 120 592 120 888 C120 1184 520 1184 520 1480 C520 1776 120 1776 120 2072 C120 2368 520 2368 520 2664" />
-              <path className="pathwayGlow" d="M520 296 C520 592 120 592 120 888 C120 1184 520 1184 520 1480 C520 1776 120 1776 120 2072 C120 2368 520 2368 520 2664" />
-              <path className="pathwayPulse" d="M520 296 C520 592 120 592 120 888 C120 1184 520 1184 520 1480 C520 1776 120 1776 120 2072 C120 2368 520 2368 520 2664" />
-            </svg>
-
-            <div className="pathwayNodes">
+          <div className="workflowSteps">
             {steps.map((step, index) => (
               <article className="pathStep" key={step.label}>
                 <video
@@ -413,7 +406,6 @@ export default function Home() {
                 </div>
               </article>
             ))}
-            </div>
           </div>
         </div>
       </section>

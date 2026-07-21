@@ -23,6 +23,11 @@ export type OnboardingStep =
   | "ai-preferences"
   | "output"
   | "publish"
+  | "generating-images"
+  | "generated-output"
+  | "generate-listing"
+  | "listing-output"
+  | "history"
   | "done";
 
 export interface OnboardingState {
@@ -69,6 +74,11 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
   "ai-preferences",
   "output",
   "publish",
+  "generating-images",
+  "generated-output",
+  "generate-listing",
+  "listing-output",
+  "history",
   "done",
 ];
 
@@ -95,5 +105,10 @@ export const STEP_META: Record<OnboardingStep, { label: string; description: str
   "ai-preferences":         { label: "AI preferences",       description: "Style, text, and language" },
   output:                   { label: "Output settings",       description: "Quantity, size & format" },
   publish:                  { label: "Publish",               description: "Go live" },
+  "generating-images":      { label: "Generating images",     description: "AI is creating your image set" },
+  "generated-output":       { label: "Images ready",          description: "Preview and download your images" },
+  "generate-listing":       { label: "Listing text",          description: "Optional — AI-written marketplace copy" },
+  "listing-output":         { label: "Listing ready",         description: "Copy your generated listing text" },
+  history:                  { label: "History",               description: "Revisit past generations anytime" },
   done:                     { label: "All done!",             description: "You're ready to go" },
 };
