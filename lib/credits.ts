@@ -18,6 +18,8 @@ export type CreditTransaction = {
   amount: number;
   description: string;
   generationId?: string;
+  priceInr?: number;
+  planId?: string;
   createdAt: Date;
 };
 
@@ -125,7 +127,8 @@ export async function addUserCredits(
   userId: string,
   amount: number,
   description: string,
-  idempotencyKey?: string
+  idempotencyKey?: string,
+  billing?: { priceInr?: number; planId?: string }
 ): Promise<{ newBalance: number; alreadyProcessed: boolean }> {
   const db = await getDb();
 
@@ -156,6 +159,8 @@ export async function addUserCredits(
     amount,
     description,
     generationId: idempotencyKey,
+    priceInr: billing?.priceInr,
+    planId: billing?.planId,
     createdAt: new Date(),
   });
 

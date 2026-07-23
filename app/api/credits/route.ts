@@ -17,10 +17,14 @@ export async function GET() {
       balance: credits?.balance ?? 0,
       pricing: IMAGE_COST,
       transactions: transactions.map((t) => ({
+        id: String(t._id ?? ""),
         type: t.type,
         amount: t.amount,
         description: t.description,
         createdAt: t.createdAt,
+        priceInr: t.priceInr,
+        planId: t.planId,
+        orderId: t.generationId,
       })),
     });
   } catch (err) {

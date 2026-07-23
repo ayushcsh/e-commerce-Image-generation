@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useSession } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import SplitText from "@/components/SplitText";
 import CursorGrid from "@/components/CursorGrid";
 
@@ -120,6 +120,7 @@ export default function Home() {
   const { data: session, status: sessionStatus } = useSession();
   const isAuthed = sessionStatus === "authenticated";
   const ctaHref = isAuthed ? "/studio" : "/login";
+  const [showAccountMenu, setShowAccountMenu] = useState(false);
 
   useEffect(() => {
     const btn = document.getElementById("mobile-menu-btn");
@@ -181,7 +182,14 @@ export default function Home() {
         <header className="siteHeader">
           <div className="navBar">
             <a className="siteBrand" href="/">
-              <span className="brandMark" aria-hidden="true">VF</span>
+              <Image
+                src="/logo.png"
+                alt=""
+                width={211}
+                height={196}
+                className="brandMark"
+                aria-hidden="true"
+              />
               <SplitText
                 text="VendorFlow"
                 className="brandName"
@@ -213,21 +221,49 @@ export default function Home() {
           </div>
 
           {sessionStatus === "authenticated" && session?.user ? (
-            <Link className="headerCornerAvatar" href="/studio" aria-label="Go to your studio" title={session.user.name || session.user.email || "Account"}>
-              {session.user.image ? (
-                <Image
-                  src={session.user.image}
-                  alt=""
-                  width={38}
-                  height={38}
-                  unoptimized
-                />
-              ) : (
-                <span>
-                  {(session.user.name?.[0] || session.user.email?.[0] || "U").toUpperCase()}
-                </span>
+            <div className="headerAccountMenu">
+              <button
+                className="headerCornerAvatar"
+                type="button"
+                onClick={() => setShowAccountMenu((v) => !v)}
+                aria-label="Account menu"
+                aria-haspopup="true"
+                aria-expanded={showAccountMenu}
+                title={session.user.name || session.user.email || "Account"}
+              >
+                {session.user.image ? (
+                  <Image
+                    src={session.user.image}
+                    alt=""
+                    width={38}
+                    height={38}
+                    unoptimized
+                  />
+                ) : (
+                  <span>
+                    {(session.user.name?.[0] || session.user.email?.[0] || "U").toUpperCase()}
+                  </span>
+                )}
+              </button>
+
+              {showAccountMenu && (
+                <>
+                  <div className="headerAccountBackdrop" onClick={() => setShowAccountMenu(false)} />
+                  <div className="headerAccountDropdown">
+                    <Link href="/studio" className="headerAccountItem" onClick={() => setShowAccountMenu(false)}>
+                      Go to Studio
+                    </Link>
+                    <button
+                      className="headerAccountItem headerAccountSignOut"
+                      type="button"
+                      onClick={() => signOut({ redirectTo: "/" })}
+                    >
+                      Log out
+                    </button>
+                  </div>
+                </>
               )}
-            </Link>
+            </div>
           ) : (
             <a className="headerCornerSignUp" href="/login">Sign Up</a>
           )}

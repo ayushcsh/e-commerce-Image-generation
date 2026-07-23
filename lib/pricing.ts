@@ -19,3 +19,14 @@ export const CREDIT_PLANS: Record<CreditPlanId, { name: string; priceInr: number
 export function isCreditPlanId(value: unknown): value is CreditPlanId {
   return value === "starter" || value === "growth" || value === "pro" || value === "business";
 }
+
+// GST for digital/SaaS services in India (standard rate). Listed plan prices
+// are GST-inclusive — nothing extra is charged — this only splits the amount
+// already collected into its base + tax components for the invoice/receipt.
+export const GST_RATE = 0.18;
+
+export function splitGstInclusive(totalInr: number): { base: number; gst: number } {
+  const base = totalInr / (1 + GST_RATE);
+  const gst = totalInr - base;
+  return { base: Math.round(base * 100) / 100, gst: Math.round(gst * 100) / 100 };
+}

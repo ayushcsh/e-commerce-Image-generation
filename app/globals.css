@@ -3444,17 +3444,9 @@ svg {
 
 .brandMark {
   display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 30px;
-  background: linear-gradient(135deg, var(--primary), var(--secondary));
-  color: #fff;
-  font-size: 0.64rem;
-  font-weight: 850;
-  border-radius: 8px;
-  letter-spacing: 0;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.24);
+  width: auto;
+  height: 24px;
+  object-fit: contain;
 }
 
 .headerRight {
@@ -3711,21 +3703,28 @@ svg {
   transform: scale(0.97);
 }
 
-.headerCornerAvatar {
+.headerAccountMenu {
+  position: relative;
   grid-column: 3;
   justify-self: end;
+}
+
+.headerCornerAvatar {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 38px;
   height: 38px;
+  padding: 0;
   border-radius: 50%;
   overflow: hidden;
   border: 1.5px solid rgba(15, 23, 42, 0.9);
   background: linear-gradient(135deg, var(--primary), var(--secondary));
   color: #fff;
+  font: inherit;
   font-size: 0.86rem;
   font-weight: 800;
+  cursor: pointer;
   box-shadow: 0 8px 18px rgba(15, 23, 42, 0.1);
   transition:
     box-shadow 160ms ease,
@@ -3745,6 +3744,60 @@ svg {
 
 .headerCornerAvatar:active {
   transform: scale(0.97);
+}
+
+.headerAccountBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 540;
+}
+
+.headerAccountDropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 550;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 172px;
+  padding: 6px;
+  border: 2px solid var(--ink);
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 5px 5px 0 var(--ink);
+}
+
+.headerAccountItem {
+  display: flex;
+  align-items: center;
+  min-height: 38px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--heading);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 750;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 140ms ease, color 140ms ease;
+}
+
+.headerAccountItem:hover,
+.headerAccountItem:focus-visible {
+  background: rgba(14, 165, 233, 0.12);
+  outline: 0;
+}
+
+.headerAccountSignOut {
+  color: #dc2626;
+}
+
+.headerAccountSignOut:hover,
+.headerAccountSignOut:focus-visible {
+  background: rgba(220, 38, 38, 0.1);
 }
 
 .authAccount {
@@ -3948,7 +4001,15 @@ p {
 
 .introCopy > .langEnglish,
 .heroTagline > .langEnglish,
-.workflowCopy p > .langEnglish {
+.workflowCopy p > .langEnglish,
+.workflowCopy h2 > .langEnglish,
+.sectionEyebrow > .langEnglish,
+.sectionHeader h2 > .langEnglish,
+.featureCard h3 > .langEnglish,
+.featureCard p > .langEnglish,
+.contactIntro p > .langEnglish,
+.contactBand h2 > .langEnglish,
+.faqHeader h2 > .langEnglish {
   display: block;
 }
 
@@ -4100,9 +4161,7 @@ p {
   align-items: center;
   min-height: auto;
   padding: clamp(76px, 8vw, 124px) clamp(20px, 5vw, 72px) clamp(36px, 5vw, 72px);
-  background:
-    radial-gradient(circle at 74% 12%, rgba(14, 165, 233, 0.22), transparent 20%),
-    radial-gradient(circle at 18% 64%, rgba(14, 165, 233, 0.14), transparent 24%);
+  background: transparent;
   color: var(--ink);
 }
 
@@ -4659,18 +4718,17 @@ p {
     position: absolute;
     top: 12px;
     right: 12px;
-    bottom: 12px;
-    width: min(300px, calc(100vw - 24px));
+    height: auto;
+    max-height: calc(100vh - 24px);
+    width: min(260px, calc(100vw - 24px));
     border: 1px solid rgba(15, 23, 42, 0.09);
     border-radius: 22px;
-    background: rgba(255, 255, 255, 0.9);
+    background: #ffffff;
     padding: 0.9rem;
     display: flex;
     flex-direction: column;
     gap: 0.2rem;
     box-shadow: 0 24px 60px rgba(15, 23, 42, 0.22);
-    backdrop-filter: blur(18px) saturate(1.2);
-    -webkit-backdrop-filter: blur(18px) saturate(1.2);
     transform: translateX(100%);
     transition: transform 260ms ease;
     overflow-y: auto;
@@ -4753,6 +4811,17 @@ p {
     gap: 1.5rem;
   }
 
+  /* ── Keep step order consistent: number/copy, then video ── */
+  .pathStep:nth-child(odd) .pathStepCopy,
+  .pathStep:nth-child(even) .pathStepCopy {
+    order: 1;
+  }
+
+  .pathStep:nth-child(odd) .stepVideo,
+  .pathStep:nth-child(even) .stepVideo {
+    order: 2;
+  }
+
   /* ── Hero Mobile ── */
   .heroGrid {
     grid-template-columns: 1fr;
@@ -4760,12 +4829,20 @@ p {
   }
 
   .peoplePanel {
+    order: 2;
     min-height: 38vh;
   }
 
+  .peoplePanel img {
+    padding: 0 clamp(20px, 6vw, 40px);
+    object-position: center bottom;
+    transform: none;
+  }
+
   .copyPanel {
+    order: 1;
     min-height: auto;
-    padding: 28px 24px 48px;
+    padding: 96px 24px 48px;
     justify-content: center;
   }
 
@@ -4792,6 +4869,81 @@ p {
   .heroTitle {
     justify-items: center;
   }
+
+  /* ── Feature grid, contact, footer: collapse to single column ── */
+  .featureGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .contactBand {
+    grid-template-columns: 1fr;
+  }
+
+  .footerBottom {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "brand"
+      "nav"
+      "channels"
+      "copy"
+      "privacy";
+    justify-items: center;
+    text-align: center;
+  }
+
+  .footerBottom nav {
+    justify-content: center;
+  }
+
+  .footerChannels {
+    justify-content: center;
+  }
+
+  .footerPrivacy {
+    justify-self: center;
+  }
+
+  .footerBrand {
+    justify-items: center;
+    text-align: center;
+  }
+
+  /* ── Extra top clearance so sections never sit behind the fixed hamburger ── */
+  .featureBand,
+  .workflowBand,
+  .faqBand,
+  .contactBand {
+    padding-top: 96px;
+  }
+
+  /* ── Center copy across sections ── */
+  .sectionHeader {
+    justify-items: center;
+    text-align: center;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .featureCard {
+    align-items: center;
+    text-align: center;
+  }
+
+  .contactIntro {
+    justify-items: center;
+    text-align: center;
+  }
+
+  .contactBand h2 {
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+@media (max-width: 560px) {
+  .featureGrid {
+    grid-template-columns: 1fr;
+  }
 }
 
 
@@ -4808,7 +4960,7 @@ p {
   gap: 1rem;
   padding: 1rem 2rem;
   border-bottom: 1px solid var(--border);
-  background: rgba(245, 244, 240, 0.82);
+  background: rgba(255, 255, 255, 0.82);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   position: sticky;
@@ -5090,6 +5242,26 @@ p {
   white-space: nowrap;
 }
 .creditsPage .creditsHistoryDate { font-size: 0.72rem; color: var(--muted); }
+.creditsPage .creditsHistoryRight {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 12px;
+}
+.creditsPage .creditsHistoryBillBtn {
+  flex-shrink: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  padding: 0.3rem 0.75rem;
+  font-size: 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out);
+}
+.creditsPage .creditsHistoryBillBtn:hover { background: var(--ink); border-color: var(--ink); color: #fff; }
 .creditsPage .creditsHistoryAmount {
   flex-shrink: 0;
   font-weight: 800;
@@ -5097,6 +5269,223 @@ p {
   color: var(--ink);
 }
 .creditsPage .creditsHistoryAmount.isPositive { color: #16a34a; }
+
+/* ── Receipt / bill modal ── */
+.receiptOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  overflow-y: auto;
+  padding: 48px 20px;
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: fadeIn 180ms ease;
+}
+
+.receiptCard {
+  position: relative;
+  width: min(380px, 100%);
+  padding: 34px 28px 28px;
+  border: 2px solid var(--ink);
+  border-radius: 18px;
+  background: #ffffff;
+  color: var(--ink);
+  box-shadow: 10px 10px 0 var(--ink);
+  font-family: var(--font-minimal);
+}
+
+.receiptClose {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid rgba(15, 23, 42, 0.15);
+  border-radius: 50%;
+  background: #ffffff;
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 0.8rem;
+  line-height: 1;
+}
+.receiptClose:hover { background: var(--ink); color: #fff; }
+
+.receiptBrand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 26px;
+}
+
+.receiptBrandMark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 850;
+}
+
+.receiptBrandName {
+  font-size: 1.15rem;
+  font-weight: 950;
+  letter-spacing: -0.01em;
+}
+
+.receiptTableHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.receiptDivider {
+  height: 1px;
+  margin: 10px 0;
+  background: rgba(15, 23, 42, 0.12);
+}
+
+.receiptDividerDashed {
+  background: none;
+  border-top: 1.5px dashed rgba(15, 23, 42, 0.28);
+}
+
+.receiptRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.receiptRowNum {
+  flex-shrink: 0;
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 22px;
+  margin-top: 1px;
+  border-radius: 6px;
+  background: rgba(14, 165, 233, 0.14);
+  color: var(--primary);
+  font-size: 0.68rem;
+  font-weight: 900;
+}
+
+.receiptRowInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.receiptItemName {
+  font-size: 1rem;
+  font-weight: 850;
+}
+
+.receiptItemSub {
+  margin-top: 2px;
+  font-size: 0.76rem;
+  color: var(--muted);
+}
+
+.receiptRowPrice {
+  flex-shrink: 0;
+  font-size: 0.95rem;
+  font-weight: 850;
+}
+
+.receiptTaxBlock {
+  display: grid;
+  gap: 5px;
+  margin-bottom: 8px;
+}
+
+.receiptSubRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.receiptTotalRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin: 4px 0 2px;
+  font-size: 1rem;
+  font-weight: 950;
+}
+
+.receiptTotalRow span:last-child {
+  color: var(--primary);
+}
+
+.receiptTotalNote {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--muted);
+  text-align: right;
+}
+
+.receiptMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.receiptBarcode {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 40px;
+  margin: 18px 0 6px;
+}
+
+.receiptBarcode span {
+  flex: 1;
+  width: 1px;
+  height: 100%;
+  background: var(--ink);
+}
+
+.receiptBarcode span.isThick {
+  flex: 1.6;
+}
+
+.receiptFooter {
+  display: grid;
+  gap: 2px;
+  margin-top: 14px;
+  text-align: center;
+  font-size: 0.76rem;
+  color: var(--muted);
+}
+
+.receiptFooter strong {
+  font-size: 0.85rem;
+  font-weight: 900;
+  color: var(--ink);
+  text-transform: uppercase;
+}
 
 @media (max-width: 640px) {
   .creditsPage .creditsHeader { padding: 0.85rem 1.1rem; }

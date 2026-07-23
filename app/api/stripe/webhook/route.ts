@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { getStripe } from "@/lib/stripe";
 import { addUserCredits } from "@/lib/credits";
+import { sendReceiptEmail } from "@/lib/email";
+import { CREDIT_PLANS, isCreditPlanId } from "@/lib/pricing";
 
 export async function POST(request: Request) {
   const signature = request.headers.get("stripe-signature");
@@ -26,6 +28,7 @@ export async function POST(request: Request) {
     const userId = session.metadata?.userId;
     const plan = session.metadata?.plan ?? "credits";
     const credits = parseInt(session.metadata?.credits ?? "0", 10);
+    const priceInr = parseInt(session.metadata?.priceInr ?? "0", 10);
 
     if (!userId || !credits) {
       console.error("[stripe] webhook missing userId/credits for session", session.id);
@@ -33,12 +36,27 @@ export async function POST(request: Request) {
     }
 
     // Keyed by session ID so retried webhook deliveries can't double-credit.
-    await addUserCredits(
+    const result = await addUserCredits(
       userId,
       credits,
       `Stripe purchase: ${plan} plan`,
-      session.id
+      session.id,
+      { priceInr: priceInr || undefined, planId: plan }
     );
+
+    const email = session.customer_details?.email ?? session.customer_email;
+    if (!result.alreadyProcessed && email) {
+      const planConfig = isCreditPlanId(plan) ? CREDIT_PLANS[plan] : undefined;
+      await sendReceiptEmail({
+        to: email,
+        planName: planConfig?.name ?? plan,
+        credits,
+        bonus: planConfig?.bonus ?? 0,
+        priceInr,
+        orderId: session.id.slice(-10).toUpperCase(),
+        createdAt: new Date(),
+      });
+    }
   }
 
   return NextResponse.json({ received: true });

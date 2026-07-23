@@ -4,13 +4,17 @@ import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { Suspense, useEffect, useState } from "react";
 import { signOut } from "next-auth/react";
-import { CREDIT_PLANS, type CreditPlanId } from "@/lib/pricing";
+import { CREDIT_PLANS, GST_RATE, isCreditPlanId, splitGstInclusive, type CreditPlanId } from "@/lib/pricing";
 
 type Transaction = {
+  id: string;
   type: string;
   amount: number;
   description: string;
   createdAt: string;
+  priceInr?: number;
+  planId?: string;
+  orderId?: string;
 };
 
 const PLAN_BADGES: Partial<Record<CreditPlanId, string>> = {
@@ -47,12 +51,116 @@ function StatusBanners() {
   );
 }
 
+function ReceiptModal({
+  transaction,
+  userEmail,
+  onClose,
+}: {
+  transaction: Transaction;
+  userEmail?: string | null;
+  onClose: () => void;
+}) {
+  const plan = isCreditPlanId(transaction.planId) ? CREDIT_PLANS[transaction.planId] : undefined;
+  const created = new Date(transaction.createdAt);
+  const orderId = (transaction.orderId || transaction.id || "").slice(-10).toUpperCase();
+  const { base, gst } = typeof transaction.priceInr === "number"
+    ? splitGstInclusive(transaction.priceInr)
+    : { base: 0, gst: 0 };
+  const inr = (n: number) => `₹${n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+  return (
+    <div className="receiptOverlay" onClick={onClose}>
+      <div className="receiptCard" onClick={(e) => e.stopPropagation()}>
+        <button className="receiptClose" type="button" onClick={onClose} aria-label="Close receipt">
+          ✕
+        </button>
+
+        <div className="receiptBrand">
+          <span className="receiptBrandMark" aria-hidden="true">VF</span>
+          <span className="receiptBrandName">VendorFlow</span>
+        </div>
+
+        <div className="receiptTableHead">
+          <span>Purchased Plan</span>
+          <span>Price</span>
+        </div>
+        <div className="receiptDivider" />
+
+        <div className="receiptRow">
+          <span className="receiptRowNum">01</span>
+          <div className="receiptRowInfo">
+            <div className="receiptItemName">{plan?.name ?? transaction.planId ?? "Credit Plan"}</div>
+            <div className="receiptItemSub">
+              {transaction.amount} credits{plan?.bonus ? ` (${plan.bonus} bonus included)` : ""}
+            </div>
+          </div>
+          <div className="receiptRowPrice">
+            {typeof transaction.priceInr === "number" ? `₹${transaction.priceInr.toLocaleString("en-IN")}` : "—"}
+          </div>
+        </div>
+        <div className="receiptDivider" />
+
+        {typeof transaction.priceInr === "number" && (
+          <div className="receiptTaxBlock">
+            <div className="receiptSubRow">
+              <span>Taxable Amount</span>
+              <span>{inr(base)}</span>
+            </div>
+            <div className="receiptSubRow">
+              <span>CGST ({(GST_RATE * 50).toFixed(1)}%)</span>
+              <span>{inr(gst / 2)}</span>
+            </div>
+            <div className="receiptSubRow">
+              <span>SGST ({(GST_RATE * 50).toFixed(1)}%)</span>
+              <span>{inr(gst / 2)}</span>
+            </div>
+          </div>
+        )}
+
+        <div className="receiptTotalRow">
+          <span>Total Paid</span>
+          <span>
+            {typeof transaction.priceInr === "number"
+              ? `₹${transaction.priceInr.toLocaleString("en-IN")} INR`
+              : "—"}
+          </span>
+        </div>
+        <div className="receiptTotalNote">Inclusive of {(GST_RATE * 100).toFixed(0)}% GST</div>
+
+        <div className="receiptDivider receiptDividerDashed" />
+
+        <div className="receiptMeta">
+          <span>
+            {created.toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "numeric" })}
+          </span>
+          <span>{created.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}</span>
+          <span>{orderId}</span>
+        </div>
+
+        <div className="receiptBarcode" aria-hidden="true">
+          {Array.from({ length: 46 }).map((_, i) => (
+            <span key={i} className={i % 5 === 0 ? "isThick" : undefined} />
+          ))}
+        </div>
+
+        <div className="receiptFooter">
+          <strong>VendorFlow</strong>
+          <span>AI product image generator for online sellers</span>
+          <span>hello@productvisuals.ai</span>
+          {userEmail && <span>Billed to: {userEmail}</span>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function CreditsPage() {
   const { data: session } = useSession();
   const [balance, setBalance] = useState<number>(0);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [buyingPlan, setBuyingPlan] = useState<string | null>(null);
+  const [viewingTx, setViewingTx] = useState<Transaction | null>(null);
 
   useEffect(() => {
     fetch("/api/credits")
@@ -172,7 +280,7 @@ export default function CreditsPage() {
             <p className="creditsSectionTitle">History</p>
             <div className="creditsHistoryList">
               {transactions.map((tx, i) => (
-                <div key={i} className="creditsHistoryRow">
+                <div key={tx.id || i} className="creditsHistoryRow">
                   <div className="creditsHistoryDetails">
                     <div className="creditsHistoryDesc">{tx.description}</div>
                     <div className="creditsHistoryDate">
@@ -183,8 +291,19 @@ export default function CreditsPage() {
                       })}
                     </div>
                   </div>
-                  <div className={`creditsHistoryAmount${tx.amount > 0 ? " isPositive" : ""}`}>
-                    {tx.amount > 0 ? "+" : "−"}{Math.abs(tx.amount)} Credits
+                  <div className="creditsHistoryRight">
+                    {typeof tx.priceInr === "number" && (
+                      <button
+                        className="creditsHistoryBillBtn"
+                        type="button"
+                        onClick={() => setViewingTx(tx)}
+                      >
+                        View Bill
+                      </button>
+                    )}
+                    <div className={`creditsHistoryAmount${tx.amount > 0 ? " isPositive" : ""}`}>
+                      {tx.amount > 0 ? "+" : "−"}{Math.abs(tx.amount)} Credits
+                    </div>
                   </div>
                 </div>
               ))}
@@ -192,6 +311,14 @@ export default function CreditsPage() {
           </div>
         )}
       </div>
+
+      {viewingTx && (
+        <ReceiptModal
+          transaction={viewingTx}
+          userEmail={session?.user?.email}
+          onClose={() => setViewingTx(null)}
+        />
+      )}
     </main>
   );
 }
