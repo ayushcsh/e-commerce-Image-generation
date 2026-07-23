@@ -16,8 +16,6 @@ interface TourTooltipProps {
   nextLabel?: string;
   nextDisabled?: boolean;
   hideNext?: boolean;
-  isTourMode?: boolean;
-  onRestartTour?: () => void;
   onNext?: () => void;
   onPrev?: () => void;
   onSkip?: () => void;
@@ -38,8 +36,6 @@ export default function TourTooltip({
   nextLabel,
   nextDisabled = false,
   hideNext = false,
-  isTourMode = false,
-  onRestartTour,
   onNext,
   onPrev,
   onSkip,
@@ -278,20 +274,6 @@ export default function TourTooltip({
             </button>
           )}
         </div>
-
-        {isTourMode && (
-          <button
-            type="button"
-            onClick={onRestartTour}
-            style={{
-              width: "100%", marginTop: "8px", padding: "4px 8px", fontSize: "0.7rem",
-              background: "transparent", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)",
-              color: "var(--ink-secondary)", cursor: "pointer", opacity: 0.6,
-            }}
-          >
-            Restart tour (dev)
-          </button>
-        )}
       </div>
     </>
   );

@@ -24,7 +24,7 @@ import {
   type BriefForExport
 } from "@/lib/export";
 import { IMAGE_COST } from "@/lib/pricing";
-import OnboardingProvider, { useTourContext, resetVendorOnboarding } from "@/components/onboarding/OnboardingProvider";
+import OnboardingProvider, { useTourContext } from "@/components/onboarding/OnboardingProvider";
 import CreditWelcomeModal from "@/components/onboarding/CreditWelcomeModal";
 
 type UploadedImage = {
@@ -1248,14 +1248,6 @@ export default function StudioPage() {
           <span><strong>VendorFlow</strong><small>AI image generation</small></span>
         </Link>
         <div className="studioTopActions">
-          <button
-            className="devRestartTourBtn"
-            type="button"
-            onClick={() => resetVendorOnboarding()}
-            title="Restart tour (dev)"
-          >
-            Restart tour (dev)
-          </button>
           <button
             id="history-toggle-btn"
             className={`historyToggleBtn${showHistory ? " isActive" : ""}`}

@@ -31,17 +31,6 @@ function markCompleted() {
   }).catch(() => {});
 }
 
-export async function resetVendorOnboarding() {
-  try {
-    await fetch("/api/onboarding/tour", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ completed: false }),
-    });
-  } catch {}
-  window.location.reload();
-}
-
 // ── Tour Steps ─────────────────────────────────────────────────────────────────
 const TOUR_STEPS: Array<{
   step: OnboardingStep;
@@ -292,7 +281,7 @@ export default function OnboardingProvider({ children, tourMode = false }: Onboa
   const [completed, setCompleted] = useState(false);
   const [showContinue, setShowContinue] = useState(false);
   const [analyzingActive, setAnalyzingActive] = useState(false);
-  const [isTourMode, setIsTourMode] = useState(tourMode);
+  const isTourMode = tourMode;
 
   const tourActiveRef = useRef(tourActive);
   tourActiveRef.current = tourActive;
@@ -493,7 +482,7 @@ export default function OnboardingProvider({ children, tourMode = false }: Onboa
     return (
       <TourContext.Provider value={{ isTourMode, tourLockedAplus: isTourMode }}>
         {children}
-        <DoneScreen onReset={resetVendorOnboarding} />
+        <DoneScreen />
       </TourContext.Provider>
     );
   }
@@ -543,16 +532,6 @@ export default function OnboardingProvider({ children, tourMode = false }: Onboa
           onPrev={goBack}
           onSkip={handleSkip}
           onFinish={finishTour}
-          isTourMode={isTourMode}
-          onRestartTour={() => {
-            // Restart: clear completion flag and re-lock A+/basic selection
-            // (isTourMode must stay true, otherwise the restarted tour would
-            // run with those restrictions silently disabled).
-            setCompleted(false);
-            setIsTourMode(true);
-            setTourActive(false);
-            setShowWelcome(true);
-          }}
         />
       )}
     </TourContext.Provider>
@@ -560,7 +539,7 @@ export default function OnboardingProvider({ children, tourMode = false }: Onboa
 }
 
 // ── Done Screen ─────────────────────────────────────────────────────────────────
-function DoneScreen({ onReset }: { onReset: () => void }) {
+function DoneScreen() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -582,9 +561,6 @@ function DoneScreen({ onReset }: { onReset: () => void }) {
         <div className="onboardWelcomeActions">
           <button className="onboardStartBtn" type="button" onClick={() => window.location.reload()}>
             Start Creating
-          </button>
-          <button className="onboardSkipBtn" type="button" onClick={onReset}>
-            Restart Tour (dev)
           </button>
         </div>
         <div className="onboardWelcomeOrb" aria-hidden="true" />

@@ -1165,33 +1165,6 @@
   min-width: 0;
 }
 
-.studioPage .devRestartTourBtn {
-  display: inline-flex;
-  align-items: center;
-  min-height: 34px;
-  padding: 0 0.75rem;
-  border: 1px dashed var(--border-strong);
-  border-radius: 999px;
-  background: transparent;
-  cursor: pointer;
-  color: var(--muted);
-  font-size: 0.7rem;
-  font-weight: 600;
-  line-height: 1;
-  white-space: nowrap;
-  opacity: 0.7;
-  transition:
-    opacity var(--duration-fast) var(--ease-out),
-    border-color var(--duration-fast) var(--ease-out),
-    color var(--duration-fast) var(--ease-out);
-}
-
-.studioPage .devRestartTourBtn:hover {
-  opacity: 1;
-  border-color: var(--primary);
-  color: var(--primary);
-}
-
 .studioPage .historyToggleBtn {
   display: inline-flex;
   align-items: center;
