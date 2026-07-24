@@ -22,7 +22,44 @@ const APLUS_TYPES = new Set([
   "Hero Listing Image",
   "A+ Lifestyle Banner",
   "A+ Product Photo",
+  // Flipkart Rich Product Description (RPD) modules — same GPT Image 2 pipeline as Amazon A+
+  "Flipkart Hero Banner",
+  "Flipkart Feature Banner 1",
+  "Flipkart Feature Banner 2",
+  "Flipkart Feature Banner 3",
+  "Flipkart Feature Banner 4",
+  "Flipkart Lifestyle Banner",
+  "Flipkart Infographic",
+  "Flipkart Dimensions Graphic",
+  "Flipkart Comparison Chart",
+  "Flipkart Brand Story",
+  "Flipkart FAQ Graphic",
+  "Flipkart Warranty Trust",
 ]);
+
+// Fixed output size per A+/RPD module type
+const APLUS_SIZES: Record<string, { width: number; height: number }> = {
+  "Standard Banner": { width: 970, height: 300 },
+  "Banner with Text Overlay": { width: 970, height: 300 },
+  "Standard Image & Text": { width: 1000, height: 1000 },
+  "Three Image Module": { width: 1464, height: 400 },
+  "Four Image Module": { width: 1464, height: 800 },
+  "Hero Listing Image": { width: 1500, height: 1000 },
+  "A+ Lifestyle Banner": { width: 1464, height: 600 },
+  "A+ Product Photo": { width: 2000, height: 2000 },
+  "Flipkart Hero Banner": { width: 1440, height: 600 },
+  "Flipkart Feature Banner 1": { width: 1200, height: 600 },
+  "Flipkart Feature Banner 2": { width: 1200, height: 600 },
+  "Flipkart Feature Banner 3": { width: 1200, height: 600 },
+  "Flipkart Feature Banner 4": { width: 1200, height: 600 },
+  "Flipkart Lifestyle Banner": { width: 1200, height: 600 },
+  "Flipkart Infographic": { width: 1200, height: 1200 },
+  "Flipkart Dimensions Graphic": { width: 1200, height: 1200 },
+  "Flipkart Comparison Chart": { width: 1200, height: 1200 },
+  "Flipkart Brand Story": { width: 1440, height: 600 },
+  "Flipkart FAQ Graphic": { width: 1200, height: 1200 },
+  "Flipkart Warranty Trust": { width: 1200, height: 1200 },
+};
 
 async function mapWithConcurrency<T, R>(
   items: T[],
@@ -180,25 +217,7 @@ export async function POST(request: Request) {
       console.log(`[generate] Generating ${aplusTypes.length} A+ images (GPT Image 2)...`);
       const aplusImages = await mapWithConcurrency(aplusTypes, CONCURRENCY, async (imageType, index) => {
         const prompt = buildAplusPrompt(brief, imageType);
-
-        let customSize: { width: number; height: number } | undefined;
-        if (imageType === "Standard Banner") {
-          customSize = { width: 970, height: 300 };
-        } else if (imageType === "Banner with Text Overlay") {
-          customSize = { width: 970, height: 300 };
-        } else if (imageType === "Standard Image & Text") {
-          customSize = { width: 1000, height: 1000 };
-        } else if (imageType === "Three Image Module") {
-          customSize = { width: 1464, height: 400 };
-        } else if (imageType === "Four Image Module") {
-          customSize = { width: 1464, height: 800 };
-        } else if (imageType === "Hero Listing Image") {
-          customSize = { width: 1500, height: 1000 };
-        } else if (imageType === "A+ Lifestyle Banner") {
-          customSize = { width: 1464, height: 600 };
-        } else if (imageType === "A+ Product Photo") {
-          customSize = { width: 2000, height: 2000 };
-        }
+        const customSize = APLUS_SIZES[imageType];
 
         console.log(`[generate] [aplus:${index}] ${imageType} — calling GPT Image 2`);
         const generated = await generateAplusImage(prompt, referenceImageUrls, customSize);

@@ -139,6 +139,59 @@ const APLUS_IMAGE_TYPES = [
   { id: "Four Image Module",       label: "Four Image Module",       hint: "1464×800 · 2×2 grid",               size: "1464x800"  },
 ];
 
+// Flipkart Product Gallery — nano-banana, same basic pricing, 1024×1024 (1:1)
+const FLIPKART_BASIC_IMAGE_TYPES = [
+  "Main Image (Hero)",
+  "Front/Alternate Angle",
+  "Side View",
+  "Back View",
+  "Close-up / Macro",
+  "Lifestyle Image",
+  "Dimension Image",
+  "What's Included / Packaging",
+];
+
+// Flipkart Rich Product Description (RPD) modules — GPT Image 2, same A+ pricing
+const FLIPKART_APLUS_IMAGE_TYPES = [
+  { id: "Flipkart Hero Banner",        label: "Hero Banner",       hint: "1440×600 · brand + product",          size: "1440x600"  },
+  { id: "Flipkart Feature Banner 1",   label: "Feature Banner 1",  hint: "1200×600 · key USP",                  size: "1200x600"  },
+  { id: "Flipkart Feature Banner 2",   label: "Feature Banner 2",  hint: "1200×600 · benefits",                 size: "1200x600"  },
+  { id: "Flipkart Feature Banner 3",   label: "Feature Banner 3",  hint: "1200×600 · material",                 size: "1200x600"  },
+  { id: "Flipkart Feature Banner 4",   label: "Feature Banner 4",  hint: "1200×600 · technology",               size: "1200x600"  },
+  { id: "Flipkart Lifestyle Banner",   label: "Lifestyle Banner",  hint: "1200×600 · product in use",           size: "1200x600"  },
+  { id: "Flipkart Infographic",        label: "Infographic",       hint: "1200×1200 · features with icons",     size: "1200x1200" },
+  { id: "Flipkart Dimensions Graphic", label: "Dimensions",        hint: "1200×1200 · measurements",            size: "1200x1200" },
+  { id: "Flipkart Comparison Chart",   label: "Comparison Chart",  hint: "1200×1200 · compare models",          size: "1200x1200" },
+  { id: "Flipkart Brand Story",        label: "Brand Story",       hint: "1440×600 · about brand",              size: "1440x600"  },
+  { id: "Flipkart FAQ Graphic",        label: "FAQ Graphic",       hint: "1200×1200 · common questions",        size: "1200x1200" },
+  { id: "Flipkart Warranty Trust",     label: "Warranty / Trust",  hint: "1200×1200 · warranty, certifications", size: "1200x1200" },
+];
+
+// Meesho Product Gallery — nano-banana, basic pricing, 1000×1000 (1:1)
+const MEESHO_GALLERY_IMAGE_TYPES = [
+  "Meesho Hero Image",
+  "Meesho Front View",
+  "Meesho Back View",
+  "Meesho Side View",
+  "Meesho Close-up",
+  "Meesho Lifestyle Image",
+  "Meesho Size/Dimension Image",
+  "Meesho Package/What's Included",
+];
+
+// Meesho Infographic Images — Meesho has no dedicated A+/RPD section, so these
+// informational graphics live in the regular gallery at basic pricing too.
+const MEESHO_INFOGRAPHIC_IMAGE_TYPES = [
+  "Meesho Feature Highlights",
+  "Meesho Material Details",
+  "Meesho Fabric Composition",
+  "Meesho Size Chart",
+  "Meesho Usage Instructions",
+  "Meesho Wash Care",
+  "Meesho Color Variants",
+  "Meesho Package Contents",
+];
+
 // Display labels with optional badges for image types
 const IMAGE_TYPE_LABELS: Record<string, string> = {
   "A+ Product Photo ⬜": "A+ Photo ★",
@@ -274,8 +327,8 @@ function PillGroup({ legend, options, value, onChange, id }: {
   );
 }
 
-function CheckGrid({ legend, hint, options, values, onToggle, columns = 3, disabled = false }: {
-  legend: ReactNode; hint?: string; options: string[]; values: string[]; onToggle: (v: string) => void; columns?: number; disabled?: boolean;
+function CheckGrid({ legend, hint, options, values, onToggle, columns = 3, disabled = false, singleSelect = false, name }: {
+  legend: ReactNode; hint?: string; options: string[]; values: string[]; onToggle: (v: string) => void; columns?: number; disabled?: boolean; singleSelect?: boolean; name?: string;
 }) {
   return (
     <fieldset className="checkFieldset">
@@ -285,7 +338,8 @@ function CheckGrid({ legend, hint, options, values, onToggle, columns = 3, disab
         {options.map((option) => (
           <label className={`checkOption${disabled ? " isLocked" : ""}`} key={option}>
             <input
-              type="checkbox"
+              type={singleSelect ? "radio" : "checkbox"}
+              name={name}
               checked={values.includes(option)}
               disabled={disabled}
               onChange={() => { if (!disabled) onToggle(option); }}
@@ -295,6 +349,32 @@ function CheckGrid({ legend, hint, options, values, onToggle, columns = 3, disab
         ))}
       </div>
     </fieldset>
+  );
+}
+
+function AplusOptionGrid({ options, values, onToggle, disabled = false }: {
+  options: { id: string; label: string; hint: string }[]; values: string[]; onToggle: (id: string) => void; disabled?: boolean;
+}) {
+  return (
+    <div className="aplusImageOptions">
+      {options.map((type) => (
+        <label key={type.id} className={`aplusImageOption${values.includes(type.id) ? " isSelected" : ""}${disabled ? " isLocked" : ""}`}>
+          <input
+            type="checkbox"
+            checked={values.includes(type.id)}
+            disabled={disabled}
+            onChange={() => onToggle(type.id)}
+          />
+          <div className="aplusImageOptionContent">
+            <span className="aplusImageOptionLabel">{type.label}</span>
+            <span className="aplusImageOptionHint">{type.hint}</span>
+          </div>
+          <div className="aplusImageOptionCheck" aria-hidden="true">
+            {values.includes(type.id) ? "✓" : ""}
+          </div>
+        </label>
+      ))}
+    </div>
   );
 }
 
@@ -561,6 +641,22 @@ export default function StudioPage() {
       setSelectedAplusTypes([]);
     }
   }, [isTourMode]);
+
+  // Drop selections that belong to a marketplace's image spec once that
+  // marketplace is deselected — otherwise they'd keep counting toward cost
+  // and generation while hidden from the now-inactive section.
+  useEffect(() => {
+    const flipkartActive = marketplaces[0] === "Flipkart";
+    const meeshoActive = marketplaces[0] === "Meesho";
+    const visibleBasic = new Set(
+      flipkartActive ? FLIPKART_BASIC_IMAGE_TYPES
+      : meeshoActive ? [...MEESHO_GALLERY_IMAGE_TYPES, ...MEESHO_INFOGRAPHIC_IMAGE_TYPES]
+      : BASIC_IMAGE_TYPES
+    );
+    const visibleAplus = new Set(flipkartActive ? FLIPKART_APLUS_IMAGE_TYPES.map((t) => t.id) : meeshoActive ? [] : APLUS_IMAGE_TYPES.map((t) => t.id));
+    setSelectedBasicTypes((prev) => prev.filter((t) => visibleBasic.has(t)));
+    setSelectedAplusTypes((prev) => prev.filter((t) => visibleAplus.has(t)));
+  }, [marketplaces]);
   const [keyFeatures, setKeyFeatures] = useState<string[]>([]);
   const [productColors, setProductColors] = useState<string[]>([]);
   const [brandColors, setBrandColors] = useState<string[]>([]);
@@ -643,6 +739,13 @@ export default function StudioPage() {
   };
   const canAfford = creditBalance >= selectedCost.total;
 
+  // Which image-type option set(s) to show: each marketplace with its own spec gets
+  // its own section. Amazon and Meesho (no dedicated spec yet) share the generic set;
+  // Flipkart gets its own Product Gallery + RPD spec.
+  const showFlipkartImageOptions = marketplaces[0] === "Flipkart";
+  const showMeeshoImageOptions = marketplaces[0] === "Meesho";
+  const showGenericImageOptions = !showFlipkartImageOptions && !showMeeshoImageOptions;
+
   function loadHistory() {
     setHistoryLoading(true);
     fetch("/api/history")
@@ -718,6 +821,32 @@ export default function StudioPage() {
 
   function dismissNotification(id: string) {
     setNotifications((prev) => prev.filter((n) => n.id !== id));
+  }
+
+  function toggleBasicImageType(value: string) {
+    if (isTourMode) return;
+    const isRemoving = selectedBasicTypes.includes(value);
+    if (!isRemoving) {
+      const nextCost = (selectedBasicTypes.length + 1) * IMAGE_COST.basic + selectedAplusTypes.length * IMAGE_COST.aplus;
+      if (nextCost > creditBalance) {
+        addNotification({ type: "error", message: `Insufficient credits — this would need ${nextCost}, you have ${creditBalance}.` });
+        return;
+      }
+    }
+    setSelectedBasicTypes((prev) => toggleValue(prev, value));
+  }
+
+  function toggleAplusImageType(value: string) {
+    if (isTourMode) return;
+    const isRemoving = selectedAplusTypes.includes(value);
+    if (!isRemoving) {
+      const nextCost = selectedBasicTypes.length * IMAGE_COST.basic + (selectedAplusTypes.length + 1) * IMAGE_COST.aplus;
+      if (nextCost > creditBalance) {
+        addNotification({ type: "error", message: `Insufficient credits — this would need ${nextCost}, you have ${creditBalance}.` });
+        return;
+      }
+    }
+    setSelectedAplusTypes((prev) => toggleValue(prev, value));
   }
 
   function updateBrief(field: keyof BriefState, value: string) {
@@ -912,8 +1041,8 @@ export default function StudioPage() {
       { bad: images.length === 0, message: "Add at least one product photo.", targetId: "photos" },
       { bad: !brief.productName.trim(), message: "Add a product name.", targetId: "product-name-field" },
       { bad: !brief.category.trim(), message: "Add a product category.", targetId: "category-field" },
-      { bad: marketplaces.length === 0, message: "Select at least one marketplace.", targetId: "marketplace-section" },
-      { bad: selectedBasicTypes.length === 0 && selectedAplusTypes.length === 0, message: "Pick at least one image type.", targetId: "basic-images-section" },
+      { bad: marketplaces.length === 0, message: "Select a marketplace.", targetId: "marketplace-section" },
+      { bad: selectedBasicTypes.length === 0 && selectedAplusTypes.length === 0, message: "Pick at least one image type.", targetId: showFlipkartImageOptions ? "flipkart-gallery-section" : showMeeshoImageOptions ? "meesho-gallery-section" : "basic-images-section" },
     ];
 
     const warnings = requiredChecks.filter((c) => c.bad).map((c) => c.message);
@@ -1127,7 +1256,7 @@ export default function StudioPage() {
     if (images.length === 0) return "Add at least one product photo.";
     if (!brief.productName.trim()) return "Add a product name.";
     if (!brief.category.trim()) return "Add a product category.";
-    if (marketplaces.length === 0) return "Select at least one marketplace.";
+    if (marketplaces.length === 0) return "Select a marketplace.";
     if (selectedBasicTypes.length === 0 && selectedAplusTypes.length === 0) {
       return "Select at least one image type below.";
     }
@@ -1437,9 +1566,9 @@ export default function StudioPage() {
           </FormSection>
 
           <FormSection id="marketplace-section" eyebrow="Required" title="Marketplace & background">
-            <CheckGrid legend={<><span className="requiredMark">*</span> Marketplace(s)</>}
+            <CheckGrid legend={<><span className="requiredMark">*</span> Marketplace</>}
               options={MARKETPLACES} values={marketplaces}
-              onToggle={(value) => setMarketplaces((current) => toggleValue(current, value))} columns={3} />
+              onToggle={(value) => setMarketplaces([value])} columns={3} singleSelect name="marketplace" />
             <PillGroup legend="Background preference" options={BACKGROUND_OPTIONS}
               value={brief.background} onChange={(value) => updateBrief("background", value)} />
             {brief.background === "Custom Color" ? (
@@ -1494,70 +1623,95 @@ export default function StudioPage() {
           </FormSection>
 
           {/* Basic Images */}
-          <FormSection id="basic-images-section" eyebrow="Basic Images" title="Select basic images">
-            <div className="imageTypeSectionHeader">
-              <span className="imageTypeBadge basic">Basic</span>
-              <span className="imageTypePrice">{IMAGE_COST.basic} Credit per image · nano-banana AI</span>
-              <span className="helpTip" style={{ marginLeft: "auto" }}>
-                <button className="helpTipBtn" type="button" tabIndex={0}>?</button>
-                <span className="helpTipBubble">Standard listing images for product pages — main shot, angles, lifestyle, and feature infographics.</span>
-              </span>
-            </div>
-            <CheckGrid legend="Basic image types" options={BASIC_IMAGE_TYPES} values={selectedBasicTypes}
-              onToggle={(value) => {
-                const isRemoving = selectedBasicTypes.includes(value);
-                if (!isRemoving) {
-                  const nextCost = (selectedBasicTypes.length + 1) * IMAGE_COST.basic + selectedAplusTypes.length * IMAGE_COST.aplus;
-                  if (nextCost > creditBalance) {
-                    addNotification({ type: "error", message: `Insufficient credits — this would need ${nextCost}, you have ${creditBalance}.` });
-                    return;
-                  }
-                }
-                setSelectedBasicTypes((prev) => toggleValue(prev, value));
-              }} columns={2} disabled={isTourMode} />
-          </FormSection>
+          {showGenericImageOptions && (
+            <FormSection id="basic-images-section" eyebrow="Basic Images" title="Select basic images">
+              <div className="imageTypeSectionHeader">
+                <span className="imageTypeBadge basic">Basic</span>
+                <span className="imageTypePrice">{IMAGE_COST.basic} Credit per image · nano-banana AI</span>
+                <span className="helpTip" style={{ marginLeft: "auto" }}>
+                  <button className="helpTipBtn" type="button" tabIndex={0}>?</button>
+                  <span className="helpTipBubble">Standard listing images for product pages — main shot, angles, lifestyle, and feature infographics.</span>
+                </span>
+              </div>
+              <CheckGrid legend="Basic image types" options={BASIC_IMAGE_TYPES} values={selectedBasicTypes}
+                onToggle={toggleBasicImageType} columns={2} disabled={isTourMode} />
+            </FormSection>
+          )}
 
           {/* A+ Listing Images */}
-          <FormSection id="aplus-images-section" eyebrow="A+ Listing Images" title="Premium A+ images">
-            <div className="imageTypeSectionHeader">
-              <span className="imageTypeBadge aplus">A+ Premium</span>
-              <span className="imageTypePrice">{IMAGE_COST.aplus} Credits per image · GPT Image 2 AI</span>
-              <span className="helpTip" style={{ marginLeft: "auto" }}>
-                <button className="helpTipBtn" type="button" tabIndex={0}>?</button>
-                <span className="helpTipBubble">Rich A+ Content banners for Amazon/Flipkart — high-quality composite images with text overlays.</span>
-              </span>
-            </div>
-            <div className="aplusImageOptions">
-              {APLUS_IMAGE_TYPES.map((type) => (
-                <label key={type.id} className={`aplusImageOption${selectedAplusTypes.includes(type.id) ? " isSelected" : ""}${isTourMode ? " isLocked" : ""}`}>
-                  <input
-                    type="checkbox"
-                    checked={selectedAplusTypes.includes(type.id)}
-                    disabled={isTourMode}
-                    onChange={() => {
-                      if (isTourMode) return;
-                      const isRemoving = selectedAplusTypes.includes(type.id);
-                      if (!isRemoving) {
-                        const nextCost = selectedBasicTypes.length * IMAGE_COST.basic + (selectedAplusTypes.length + 1) * IMAGE_COST.aplus;
-                        if (nextCost > creditBalance) {
-                          addNotification({ type: "error", message: `Insufficient credits — this would need ${nextCost}, you have ${creditBalance}.` });
-                          return;
-                        }
-                      }
-                      setSelectedAplusTypes((prev) => toggleValue(prev, type.id));
-                    }}
-                  />
-                  <div className="aplusImageOptionContent">
-                    <span className="aplusImageOptionLabel">{type.label}</span>
-                    <span className="aplusImageOptionHint">{type.hint}</span>
-                  </div>
-                  <div className="aplusImageOptionCheck" aria-hidden="true">
-                    {selectedAplusTypes.includes(type.id) ? "✓" : ""}
-                  </div>
-                </label>
-              ))}
-            </div>
-          </FormSection>
+          {showGenericImageOptions && (
+            <FormSection id="aplus-images-section" eyebrow="A+ Listing Images" title="Premium A+ images">
+              <div className="imageTypeSectionHeader">
+                <span className="imageTypeBadge aplus">A+ Premium</span>
+                <span className="imageTypePrice">{IMAGE_COST.aplus} Credits per image · GPT Image 2 AI</span>
+                <span className="helpTip" style={{ marginLeft: "auto" }}>
+                  <button className="helpTipBtn" type="button" tabIndex={0}>?</button>
+                  <span className="helpTipBubble">Rich A+ Content banners for Amazon — high-quality composite images with text overlays.</span>
+                </span>
+              </div>
+              <AplusOptionGrid options={APLUS_IMAGE_TYPES} values={selectedAplusTypes} onToggle={toggleAplusImageType} disabled={isTourMode} />
+            </FormSection>
+          )}
+
+          {/* Flipkart Product Gallery */}
+          {showFlipkartImageOptions && (
+            <FormSection id="flipkart-gallery-section" eyebrow="Flipkart Product Gallery" title="Select Flipkart gallery images">
+              <div className="imageTypeSectionHeader">
+                <span className="imageTypeBadge basic">Basic</span>
+                <span className="imageTypePrice">{IMAGE_COST.basic} Credit per image · nano-banana AI · 1024×1024</span>
+                <span className="helpTip" style={{ marginLeft: "auto" }}>
+                  <button className="helpTipBtn" type="button" tabIndex={0}>?</button>
+                  <span className="helpTipBubble">Flipkart&apos;s 1–8 image product gallery — square 1024×1024 (ideal up to 2048×2048), pure white main image.</span>
+                </span>
+              </div>
+              <CheckGrid legend="Flipkart gallery slots" options={FLIPKART_BASIC_IMAGE_TYPES} values={selectedBasicTypes}
+                onToggle={toggleBasicImageType} columns={2} disabled={isTourMode} />
+            </FormSection>
+          )}
+
+          {/* Flipkart Rich Product Description (RPD) */}
+          {showFlipkartImageOptions && (
+            <FormSection id="flipkart-rpd-section" eyebrow="Flipkart RPD" title="Rich Product Description modules">
+              <div className="imageTypeSectionHeader">
+                <span className="imageTypeBadge aplus">RPD Premium</span>
+                <span className="imageTypePrice">{IMAGE_COST.aplus} Credits per image · GPT Image 2 AI</span>
+                <span className="helpTip" style={{ marginLeft: "auto" }}>
+                  <button className="helpTipBtn" type="button" tabIndex={0}>?</button>
+                  <span className="helpTipBubble">Flipkart doesn&apos;t call these &quot;A+&quot; — sellers still build these visual modules for an enhanced product page (RPD).</span>
+                </span>
+              </div>
+              <AplusOptionGrid options={FLIPKART_APLUS_IMAGE_TYPES} values={selectedAplusTypes} onToggle={toggleAplusImageType} disabled={isTourMode} />
+            </FormSection>
+          )}
+
+          {/* Meesho Product Gallery */}
+          {showMeeshoImageOptions && (
+            <FormSection id="meesho-gallery-section" eyebrow="Meesho Product Gallery" title="Select Meesho gallery images">
+              <div className="imageTypeSectionHeader">
+                <span className="imageTypeBadge basic">Basic</span>
+                <span className="imageTypePrice">{IMAGE_COST.basic} Credit per image · nano-banana AI · 1000×1000</span>
+                <span className="helpTip" style={{ marginLeft: "auto" }}>
+                  <button className="helpTipBtn" type="button" tabIndex={0}>?</button>
+                  <span className="helpTipBubble">Meesho&apos;s 3–8 image product gallery — square 1000×1000, white/light background main image, no text or watermarks.</span>
+                </span>
+              </div>
+              <CheckGrid legend="Meesho gallery slots" options={MEESHO_GALLERY_IMAGE_TYPES} values={selectedBasicTypes}
+                onToggle={toggleBasicImageType} columns={2} disabled={isTourMode} />
+            </FormSection>
+          )}
+
+          {/* Meesho Infographic Images */}
+          {showMeeshoImageOptions && (
+            <FormSection id="meesho-infographic-section" eyebrow="Meesho Infographics" title="Informational graphics (optional)"
+              description="Meesho has no separate A+ section — these live in the regular gallery at the same basic price.">
+              <div className="imageTypeSectionHeader">
+                <span className="imageTypeBadge basic">Basic</span>
+                <span className="imageTypePrice">{IMAGE_COST.basic} Credit per image · nano-banana AI · 1000×1000</span>
+              </div>
+              <CheckGrid legend="Meesho infographic types" options={MEESHO_INFOGRAPHIC_IMAGE_TYPES} values={selectedBasicTypes}
+                onToggle={toggleBasicImageType} columns={2} disabled={isTourMode} />
+            </FormSection>
+          )}
 
           <FormSection id="ai-preferences-section" eyebrow="AI preferences" title="Style, text & language">
             <PillGroup legend="Image style" options={AI_IMAGE_STYLES} value={brief.aiStyle}

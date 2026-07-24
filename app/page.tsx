@@ -569,7 +569,10 @@ export default function Home() {
             <a href="#contact">Support</a>
           </div>
 
-          <span className="footerCopy">© Copyright 2026 Product Visuals</span>
+          <div className="footerCopy">
+            <span>© Copyright 2026 Product Visuals</span>
+            <span className="footerCredit">Developed &amp; designed by <strong>Kriscel Tech</strong></span>
+          </div>
           <a className="footerPrivacy" href="#contact">Privacy Policy</a>
         </div>
       </footer>

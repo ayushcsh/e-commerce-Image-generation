@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import Providers from "./providers";
+import AiAssistant from "@/components/AiAssistant";
 
 export const metadata: Metadata = {
   title: "VendorFlow — AI Product Image Generator",
@@ -17,6 +18,7 @@ export default function RootLayout({
     <html lang="en">
       <body suppressHydrationWarning>
         <Providers>{children}</Providers>
+        <AiAssistant />
       </body>
     </html>
   );

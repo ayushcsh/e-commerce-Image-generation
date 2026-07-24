@@ -169,6 +169,238 @@ TYPOGRAPHY: Brand name and warranty info in clean, premium font — minimal text
 ASPECT: Portrait (2:3) or square, output 960x1280 or 1280x1280 pixels. NO watermarks.`;
   }
 
+  // ── 10. Flipkart: Main Image (Hero) ──────────────────────────────────────────
+  // Flipkart gallery slot 1 — pure white, product only, 1024x1024
+  if (imageType === "Main Image (Hero)") {
+    return `Professional Flipkart marketplace hero product photography. ${brief.productName}${brief.brandName ? ` by ${brief.brandName}` : ""}.
+CRITICAL COMPOSITION: Center the product perfectly in the frame, upright, occupying at least 75% of the frame height — this is the primary gallery thumbnail buyers see first. Background: PURE WHITE (#FFFFFF), completely seamless, no gradient, no props, no shadow gradients — only a faint, barely-visible contact shadow directly under the product. NO watermark, NO logo overlay, NO border, NO promotional text anywhere in the frame — Flipkart's main image policy forbids all of these.
+LIGHTING: Even, shadow-free studio lighting from both sides with a subtle top-down key light. Colors must be accurate and vivid, no color cast.
+SCALE / QUANTITY: ${brief.quantityPerSet && parseInt(brief.quantityPerSet) > 1 ? `Show all ${brief.quantityPerSet} identical pieces arranged neatly and symmetrically.` : "Show a single product unit, pristine and centered."}
+${brief.productColors.length > 0 ? `Product color(s): ${brief.productColors.join(", ")}.` : ""}
+${brief.material ? `Material: ${brief.material}.` : ""}
+FINAL QUALITY: Sharp edges, no grain, true-to-life color. Aspect ratio strictly 1:1, output 1024x1024 pixels (this must read clearly even zoomed to 2048x2048). NO text of any kind.`;
+  }
+
+  // ── 11. Flipkart: Front/Alternate Angle ──────────────────────────────────────
+  if (imageType === "Front/Alternate Angle") {
+    return `Professional Flipkart gallery product photography — alternate angle. ${brief.productName}${brief.brandName ? ` by ${brief.brandName}` : ""}.
+COMPOSITION: Shoot the product from a different front-facing perspective than a straight-on hero shot — a gentle 15–25 degree rotation that still reads as a "front" view but gives the buyer a second reference point. Product centered, occupying most of the frame. Background: PURE WHITE seamless, no props, no shadow gradients besides a soft contact shadow.
+LIGHTING: Clean, even studio lighting, no harsh highlights, accurate color reproduction.
+${brief.productColors.length > 0 ? `Product color(s): ${brief.productColors.join(", ")}.` : ""}
+${brief.keyFeatures.length > 0 ? `Subtly frame the shot so this feature is visible: ${brief.keyFeatures[0]}.` : ""}
+ASPECT: Square 1:1, output 1024x1024 pixels. NO text, NO watermark, NO props.`;
+  }
+
+  // ── 12. Flipkart: Side View ───────────────────────────────────────────────────
+  if (imageType === "Side View") {
+    return `Professional Flipkart gallery product photography — side view. ${brief.productName}${brief.brandName ? ` by ${brief.brandName}` : ""}.
+COMPOSITION: Shoot the product from a direct 90-degree side profile so the buyer can clearly judge its thickness, depth, and side-profile design. The product must be perfectly centered and fully visible in profile — no angling that hides the side silhouette. Background: PURE WHITE seamless studio.
+LIGHTING: Side-emphasis lighting — a key light positioned to skim across the profile and reveal contour and thickness, with a soft fill to avoid harsh shadows on the far side.
+${brief.material ? `Material: ${brief.material} — the side profile should reveal build/material quality.` : ""}
+${brief.dimensions ? `Dimensions reference (for accurate proportions): ${brief.dimensions}.` : ""}
+ASPECT: Square 1:1, output 1024x1024 pixels. NO text, NO watermark.`;
+  }
+
+  // ── 13. Flipkart: Back View ───────────────────────────────────────────────────
+  if (imageType === "Back View") {
+    return `Professional Flipkart gallery product photography — rear/back view. ${brief.productName}${brief.brandName ? ` by ${brief.brandName}` : ""}.
+COMPOSITION: Rotate the product 180 degrees from its front-facing hero shot to show the complete back surface — rear panel, ports, straps, closures, labels, or any rear-mounted details relevant to this product category. Centered, filling most of the frame. Background: PURE WHITE seamless studio, no props.
+LIGHTING: Even studio lighting that clearly reveals rear surface details without glare or deep shadow pockets.
+${brief.material ? `Material: ${brief.material}.` : ""}
+${brief.keyFeatures.length > 0 ? `If any of these features live on the back of the product, make sure they're visible: ${brief.keyFeatures.join(", ")}.` : ""}
+ASPECT: Square 1:1, output 1024x1024 pixels. NO text, NO watermark.`;
+  }
+
+  // ── 14. Flipkart: Close-up / Macro ────────────────────────────────────────────
+  if (imageType === "Close-up / Macro") {
+    return `Macro close-up photography for Flipkart gallery — material and texture detail. ${brief.productName}${brief.brandName ? ` by ${brief.brandName}` : ""}.
+COMPOSITION: Extreme close-up filling the entire frame with the product's most tactile, quality-communicating surface — stitching, weave, grain, coating, seams, or finish. Shallow depth of field with the focal area razor-sharp and edges softly falling off.
+SUBJECT: ${brief.material ? `Material: ${brief.material} — show its texture and construction quality at macro scale.` : "Surface texture, stitching, and build quality."}
+LIGHTING: Controlled directional lighting to bring out texture contrast — side-raking light for fabric/grain, diffused single-source for metallic/glossy surfaces.
+${brief.productColors.length > 0 ? `Color(s) as they appear in this material: ${brief.productColors.join(", ")}.` : ""}
+ASPECT: Square 1:1, output 1024x1024 pixels. NO text, NO watermark.`;
+  }
+
+  // ── 15. Flipkart: Lifestyle Image ─────────────────────────────────────────────
+  if (imageType === "Lifestyle Image") {
+    return `Authentic lifestyle photography for Flipkart gallery. ${brief.productName}${brief.brandName ? ` by ${brief.brandName}` : ""}.
+SCENE: Place the product naturally into a realistic ${brief.targetAudience || "everyday"} setting where it is genuinely being used or displayed in context — not a studio cutout. The product remains the clear focal point even inside a real environment.
+ENVIRONMENT: Soft natural or warm ambient lighting, shallow depth of field with the product sharp and the background gently blurred. Editorial, aspirational, but believable — not an obvious stock photo.
+${brief.keyFeatures.length > 0 ? `Show the product being used in a way that implies: ${brief.keyFeatures.slice(0, 2).join(", ")}.` : ""}
+${brief.productColors.length > 0 ? `Product color(s): ${brief.productColors.join(", ")}.` : ""}
+ASPECT: Square 1:1, output 1024x1024 pixels. NO text, NO watermark.`;
+  }
+
+  // ── 16. Flipkart: Dimension Image ─────────────────────────────────────────────
+  if (imageType === "Dimension Image") {
+    return `Professional Flipkart size/dimension reference image. ${brief.productName}${brief.brandName ? ` by ${brief.brandName}` : ""}.
+COMPOSITION: Product photographed flat or upright from a clean, dimensionally-readable angle against a PURE WHITE background. Add clean, minimal technical-drawing-style dimension callout lines directly on the image, each labeled with a measurement (${brief.dimensions || "use realistic proportions for this product category"}) in cm or mm.
+STYLE: Thin, precise callout lines with a consistent modern sans-serif label font — like a spec sheet, not cluttered. ${brief.weight ? `Weight: ${brief.weight} may be noted as a small label.` : ""}
+${brief.productColors.length > 0 ? `Product color(s): ${brief.productColors.join(", ")}.` : ""}
+LIGHTING: Bright, even, shadow-free studio lighting so every callout and edge is crisp.
+ASPECT: Square 1:1, output 1024x1024 pixels. NO watermark. Only the dimension callout text is permitted.`;
+  }
+
+  // ── 17. Flipkart: What's Included / Packaging ─────────────────────────────────
+  if (imageType === "What's Included / Packaging") {
+    const pkgItems = brief.packageContents?.trim() || (brief.keyFeatures.length > 0 ? brief.keyFeatures.join(", ") : "all accessories and components");
+    return `Professional "What's Included" flat-lay photography for Flipkart gallery. ${brief.productName}${brief.brandName ? ` by ${brief.brandName}` : ""}.
+COMPOSITION: Overhead top-down flat-lay on a clean white or light neutral surface. The main product sits at the visual center, slightly larger than surrounding items, with all included accessories arranged neatly and symmetrically around it.
+ITEMS TO SHOW: ${pkgItems}. Include standard inclusions if applicable — manual, cables, chargers, spare parts.
+LIGHTING: Bright, even overhead lighting, no shadows, crisp product-catalog quality.
+ASPECT: Square 1:1, output 1024x1024 pixels. NO watermark. The buyer should understand exactly what ships in the box.`;
+  }
+
+  // ── 18. Meesho: Hero Image ────────────────────────────────────────────────────
+  // Meesho gallery slot 1 — white/light background, product centered, 1000x1000
+  if (imageType === "Meesho Hero Image") {
+    return `Professional Meesho marketplace hero product photography. ${brief.productName}${brief.brandName ? ` by ${brief.brandName}` : ""}.
+CRITICAL COMPOSITION: Center the product perfectly in the frame, upright, occupying most of the frame height — this is the primary gallery thumbnail. Background: pure WHITE or very light neutral, completely seamless, no gradient, no props. Only a faint contact shadow directly under the product. NO text, NO logo overlay, NO watermark, NO border, NO collage — Meesho's main image policy forbids all of these.
+LIGHTING: Even, shadow-free studio lighting. Colors must be accurate and vivid, no color cast.
+SCALE / QUANTITY: ${brief.quantityPerSet && parseInt(brief.quantityPerSet) > 1 ? `Show all ${brief.quantityPerSet} identical pieces arranged neatly and symmetrically.` : "Show a single product unit, pristine and centered."}
+${brief.productColors.length > 0 ? `Product color(s): ${brief.productColors.join(", ")}.` : ""}
+${brief.material ? `Material: ${brief.material}.` : ""}
+FINAL QUALITY: Sharp edges, no grain, true-to-life color. Aspect ratio strictly 1:1, output 1000x1000 pixels. NO text of any kind.`;
+  }
+
+  // ── 19. Meesho: Front View ────────────────────────────────────────────────────
+  if (imageType === "Meesho Front View") {
+    return `Professional Meesho gallery product photography — front view / alternate angle. ${brief.productName}${brief.brandName ? ` by ${brief.brandName}` : ""}.
+COMPOSITION: Shoot the product from a clean front-facing angle, slightly different from the hero shot, so the buyer gets a second clear reference. Product centered, filling most of the frame. Background: pure white or very light neutral, seamless, no props.
+LIGHTING: Clean, even studio lighting, accurate color reproduction.
+${brief.productColors.length > 0 ? `Product color(s): ${brief.productColors.join(", ")}.` : ""}
+ASPECT: Square 1:1, output 1000x1000 pixels. NO text, NO watermark.`;
+  }
+
+  // ── 20. Meesho: Back View ─────────────────────────────────────────────────────
+  if (imageType === "Meesho Back View") {
+    return `Professional Meesho gallery product photography — rear/back view. ${brief.productName}${brief.brandName ? ` by ${brief.brandName}` : ""}.
+COMPOSITION: Rotate the product 180 degrees from the front hero shot to clearly show the back — rear panel, closures, tags, or any rear details relevant to this product category. Centered, filling most of the frame. Background: pure white or very light neutral, no props.
+LIGHTING: Even studio lighting revealing rear details without glare or deep shadows.
+${brief.material ? `Material: ${brief.material}.` : ""}
+ASPECT: Square 1:1, output 1000x1000 pixels. NO text, NO watermark.`;
+  }
+
+  // ── 21. Meesho: Side View ─────────────────────────────────────────────────────
+  if (imageType === "Meesho Side View") {
+    return `Professional Meesho gallery product photography — side profile. ${brief.productName}${brief.brandName ? ` by ${brief.brandName}` : ""}.
+COMPOSITION: Shoot the product from a direct 90-degree side profile so the buyer can judge thickness, drape, or side design. Product centered, fully visible in profile. Background: pure white or very light neutral, seamless.
+LIGHTING: Side-emphasis lighting that reveals contour without harsh shadows on the far side.
+${brief.material ? `Material: ${brief.material} — the side profile should reveal fit and build.` : ""}
+ASPECT: Square 1:1, output 1000x1000 pixels. NO text, NO watermark.`;
+  }
+
+  // ── 22. Meesho: Close-up ──────────────────────────────────────────────────────
+  if (imageType === "Meesho Close-up") {
+    return `Macro close-up photography for Meesho gallery — fabric, texture, stitching, and button detail. ${brief.productName}${brief.brandName ? ` by ${brief.brandName}` : ""}.
+COMPOSITION: Extreme close-up filling the frame with the product's most quality-communicating detail — fabric weave, stitching, embroidery, print, buttons, or trims. Shallow depth of field, focal area razor-sharp.
+SUBJECT: ${brief.material ? `Material: ${brief.material} — show its texture and construction quality at macro scale.` : "Fabric texture, stitching, and finish quality."}
+LIGHTING: Directional lighting that brings out texture and stitch detail.
+${brief.productColors.length > 0 ? `Color(s) as they appear in this material: ${brief.productColors.join(", ")}.` : ""}
+ASPECT: Square 1:1, output 1000x1000 pixels. NO text, NO watermark.`;
+  }
+
+  // ── 23. Meesho: Lifestyle Image ───────────────────────────────────────────────
+  if (imageType === "Meesho Lifestyle Image") {
+    return `Authentic lifestyle photography for Meesho gallery. ${brief.productName}${brief.brandName ? ` by ${brief.brandName}` : ""}.
+SCENE: Place the product naturally into a realistic, relatable ${brief.targetAudience || "everyday"} setting where it is genuinely worn or used — warm, approachable, aspirational but attainable. The product stays the clear focal point.
+LIGHTING: Soft natural or warm ambient light, shallow depth of field with the product sharp and the background gently blurred.
+${brief.keyFeatures.length > 0 ? `Show the product in a way that implies: ${brief.keyFeatures.slice(0, 2).join(", ")}.` : ""}
+${brief.productColors.length > 0 ? `Product color(s): ${brief.productColors.join(", ")}.` : ""}
+ASPECT: Square 1:1, output 1000x1000 pixels. NO text, NO watermark.`;
+  }
+
+  // ── 24. Meesho: Size/Dimension Image ──────────────────────────────────────────
+  if (imageType === "Meesho Size/Dimension Image") {
+    return `Professional Meesho size/dimension reference image. ${brief.productName}${brief.brandName ? ` by ${brief.brandName}` : ""}.
+COMPOSITION: Product photographed flat or upright from a clean, dimensionally-readable angle against a pure white or very light background. Add clean, minimal callout lines with measurements (${brief.dimensions || "use realistic proportions for this product category"}) in cm/inches, OR — if this product is apparel/footwear — render a simple size chart table (S/M/L/XL or numeric sizes with corresponding measurements) laid over the bottom or side of the frame.
+STYLE: Thin, precise lines and a consistent modern sans-serif label font — like a spec sheet, not cluttered.
+LIGHTING: Bright, even, shadow-free studio lighting.
+ASPECT: Square 1:1, output 1000x1000 pixels. NO watermark. Only dimension/size-chart text is permitted.`;
+  }
+
+  // ── 25. Meesho: Package/What's Included ───────────────────────────────────────
+  if (imageType === "Meesho Package/What's Included") {
+    const pkgItems = brief.packageContents?.trim() || (brief.keyFeatures.length > 0 ? brief.keyFeatures.join(", ") : "all accessories and components");
+    return `Professional "What's Included" flat-lay photography for Meesho gallery. ${brief.productName}${brief.brandName ? ` by ${brief.brandName}` : ""}.
+COMPOSITION: Overhead top-down flat-lay on a clean white or light neutral surface. The main product sits at the visual center, slightly larger than surrounding items, with all included accessories arranged neatly and symmetrically around it.
+ITEMS TO SHOW: ${pkgItems}.
+LIGHTING: Bright, even overhead lighting, no shadows, crisp catalog quality.
+ASPECT: Square 1:1, output 1000x1000 pixels. NO watermark.`;
+  }
+
+  // ── 26. Meesho: Feature Highlights (infographic) ──────────────────────────────
+  if (imageType === "Meesho Feature Highlights") {
+    const features = brief.keyFeatures.length > 0 ? brief.keyFeatures : ["Premium Quality", "Comfortable Fit", "Everyday Value"];
+    return `Meesho gallery infographic — feature highlights. ${brief.productName}${brief.brandName ? ` by ${brief.brandName}` : ""}.
+COMPOSITION: Square module. Product shown as a clean hero shot in the upper or left portion, with ${features.length} short feature callouts arranged as simple icon badges or checkmark bullets around it — plain, easy to read at a glance, value-conscious buyer friendly (not overly designed).
+FEATURES:\n${features.map((f, i) => `  ${i + 1}. ${f}`).join("\n")}
+STYLE: Clean, friendly, simple sans-serif labels. Bright, approachable color accents.
+ASPECT: Square 1:1, output 1000x1000 pixels. NO watermark.`;
+  }
+
+  // ── 27. Meesho: Material Details (infographic) ────────────────────────────────
+  if (imageType === "Meesho Material Details") {
+    return `Meesho gallery infographic — material details. ${brief.productName}${brief.brandName ? ` by ${brief.brandName}` : ""}.
+COMPOSITION: Square module combining a close-up shot of the product's material/finish with a short, plain-language label block describing the material.
+MATERIAL: ${brief.material ? brief.material : "the product's primary material and finish"}.
+STYLE: Simple, legible sans-serif labels, minimal clutter, friendly tone.
+ASPECT: Square 1:1, output 1000x1000 pixels. NO watermark.`;
+  }
+
+  // ── 28. Meesho: Fabric Composition (infographic) ──────────────────────────────
+  if (imageType === "Meesho Fabric Composition") {
+    return `Meesho gallery infographic — fabric composition. ${brief.productName}${brief.brandName ? ` by ${brief.brandName}` : ""}.
+COMPOSITION: Square module. Product or fabric swatch close-up on one side, with a simple composition breakdown on the other side (e.g., percentage-style bars or a short list — "100% Cotton", "Cotton Blend", etc., inferred from: ${brief.material || "the product's material"}).
+STYLE: Clean, plain, easy-to-scan layout — a quick-glance fabric label, not a dense chart.
+ASPECT: Square 1:1, output 1000x1000 pixels. NO watermark.`;
+  }
+
+  // ── 29. Meesho: Size Chart (infographic) ──────────────────────────────────────
+  if (imageType === "Meesho Size Chart") {
+    return `Meesho gallery infographic — size chart. ${brief.productName}${brief.brandName ? ` by ${brief.brandName}` : ""}.
+COMPOSITION: Square module rendered as a clean size chart table — sizes (S/M/L/XL/XXL or numeric, appropriate to the product category) as rows, with key measurements as columns (${brief.dimensions || "chest/length/waist as relevant"}). A small product thumbnail anchors one corner.
+STYLE: Simple grid table, legible sans-serif, minimal color — like a standard apparel size guide.
+ASPECT: Square 1:1, output 1000x1000 pixels. NO watermark.`;
+  }
+
+  // ── 30. Meesho: Usage Instructions (infographic) ──────────────────────────────
+  if (imageType === "Meesho Usage Instructions") {
+    return `Meesho gallery infographic — usage instructions. ${brief.productName}${brief.brandName ? ` by ${brief.brandName}` : ""}.
+COMPOSITION: Square module showing 3-4 simple numbered steps (with small icon or mini-illustration per step) explaining how to use or wear the product. Product shown small in the corner for context.
+STEPS: Base the steps on this product's category and typical use — ${brief.description ? brief.description.substring(0, 150) : "how a buyer would set up, wear, or use this item"}.
+STYLE: Simple, friendly, numbered step icons with short labels (max 5 words each).
+ASPECT: Square 1:1, output 1000x1000 pixels. NO watermark.`;
+  }
+
+  // ── 31. Meesho: Wash Care (infographic) ───────────────────────────────────────
+  if (imageType === "Meesho Wash Care") {
+    return `Meesho gallery infographic — wash care instructions. ${brief.productName}${brief.brandName ? ` by ${brief.brandName}` : ""}.
+COMPOSITION: Square module showing standard garment-care icon row (machine wash / hand wash / do not bleach / line dry / iron low heat, as relevant) with a short plain-language care tip beneath. Product shown small for context.
+${brief.material ? `Tailor care icons to this material: ${brief.material}.` : ""}
+STYLE: Simple universal care icons, clean layout, minimal text.
+ASPECT: Square 1:1, output 1000x1000 pixels. NO watermark.`;
+  }
+
+  // ── 32. Meesho: Color Variants (infographic) ──────────────────────────────────
+  if (imageType === "Meesho Color Variants") {
+    return `Meesho gallery infographic — color variants. ${brief.productName}${brief.brandName ? ` by ${brief.brandName}` : ""}.
+COMPOSITION: Square module showing the product repeated in a clean row or grid across its available color options, each with a small color swatch and label beneath it.
+COLORS: ${brief.productColors.length > 0 ? brief.productColors.join(", ") : "the product's available color options"}.
+STYLE: Clean, evenly lit, consistent product pose across all variants, pure white background.
+ASPECT: Square 1:1, output 1000x1000 pixels. NO watermark.`;
+  }
+
+  // ── 33. Meesho: Package Contents (infographic) ────────────────────────────────
+  if (imageType === "Meesho Package Contents") {
+    const pkgItems = brief.packageContents?.trim() || (brief.keyFeatures.length > 0 ? brief.keyFeatures.join(", ") : "all accessories and components");
+    return `Meesho gallery infographic — package contents list. ${brief.productName}${brief.brandName ? ` by ${brief.brandName}` : ""}.
+COMPOSITION: Square module. Small flat-lay or icon-style illustration of each included item arranged in a simple row or grid, each with a short label beneath it.
+ITEMS: ${pkgItems}.
+STYLE: Clean, friendly, simple icon-and-label layout — easy to scan at a glance.
+ASPECT: Square 1:1, output 1000x1000 pixels. NO watermark.`;
+  }
+
   // Fallback
   return `Professional ecommerce product image. ${brief.productName}${brief.brandName ? ` by ${brief.brandName}` : ""}. Create a clean, marketplace-ready product photo with a pure white studio background. Professional studio lighting with rim highlight. ${brief.keyFeatures.length > 0 ? `Highlight: ${brief.keyFeatures.join(", ")}.` : ""} ${brief.productColors.length > 0 ? `Color(s): ${brief.productColors.join(", ")}.` : ""} ${brief.material ? `Material: ${brief.material}.` : ""} Crisp edges, vivid colors. Output 1280x1280 pixels. NO text, NO watermark.`;
 }
@@ -330,6 +562,146 @@ ${brief.keyFeatures.length > 0 ? `EMPHASIZE: ${brief.keyFeatures.slice(0, 2).joi
 ${brief.brandName ? `BRAND NOTE: ${brief.brandName} branding on the product should be faithfully reproduced.` : ""}
 QUALITY: Luxury product catalog photography — the kind of shot that makes someone want to buy. Think Apple, Dyson, or premium watch brand product pages.
 ASPECT: Square 2000×2000 pixels. NO text, NO watermark, NO logo text, NO AI label.`;
+  }
+
+  // ── Flipkart RPD: Hero Banner ────────────────────────────────────────────────
+  // 1440x600 — brand + product, top of the Rich Product Description page
+  if (imageType === "Flipkart Hero Banner") {
+    return `You are an expert Flipkart Rich Product Description (RPD) designer. Create a premium Flipkart RPD Hero Banner.
+
+PRODUCT: ${brief.productName}${brief.brandName ? ` by ${brief.brandName}` : ""}.
+COMPOSITION: Full-width hero banner. The product occupies the LEFT 50-60% of the frame as the confident hero, studio-lit on a clean white or soft gradient backdrop. The RIGHT side carries the brand identity — ${brief.brandName ? `the "${brief.brandName}" wordmark or a clean brand-style headline` : "a clean bold headline"} in elegant modern typography.
+${brief.brandColors.length > 0 ? `Use brand colors ${brief.brandColors.join(", ")} for the headline and accent elements.` : "Use a sophisticated, premium color palette for accents."}
+HEADLINE: A short, confident tagline (max 6 words) that introduces the brand and product together.
+LIGHTING: Professional studio lighting with soft rim light on the product.
+ASPECT: Wide banner 1440×600 pixels (2.4:1 ratio). Output at 1440x600. Do NOT distort. NO watermark, NO AI label.`;
+  }
+
+  // ── Flipkart RPD: Feature Banner 1 (Key USP) ─────────────────────────────────
+  if (imageType === "Flipkart Feature Banner 1") {
+    return `You are an expert Flipkart Rich Product Description (RPD) designer. Create a Flipkart RPD Feature Banner focused on the product's key USP.
+
+PRODUCT: ${brief.productName}${brief.brandName ? ` by ${brief.brandName}` : ""}.
+COMPOSITION: Wide horizontal banner. The product shown from a flattering angle on the LEFT or RIGHT half (studio-lit, clean background), with the opposite half dedicated to the single strongest unique selling point.
+KEY USP: ${brief.keyFeatures[0] ? `"${brief.keyFeatures[0]}"` : "the product's single strongest differentiator"} shown as a bold short headline (max 5 words) plus a one-line supporting sentence.
+${brief.brandColors.length > 0 ? `Use brand colors ${brief.brandColors.join(", ")} for headline and accents.` : ""}
+LIGHTING: Clean studio lighting, vivid true-to-life colors.
+ASPECT: Wide banner 1200×600 pixels (2:1 ratio). Output at 1200x600. NO watermark, NO AI label.`;
+  }
+
+  // ── Flipkart RPD: Feature Banner 2 (Benefits) ────────────────────────────────
+  if (imageType === "Flipkart Feature Banner 2") {
+    const benefits = brief.keyFeatures.length > 1 ? brief.keyFeatures.slice(0, 3) : brief.keyFeatures;
+    return `You are an expert Flipkart Rich Product Description (RPD) designer. Create a Flipkart RPD Feature Banner focused on buyer benefits.
+
+PRODUCT: ${brief.productName}${brief.brandName ? ` by ${brief.brandName}` : ""}.
+COMPOSITION: Wide horizontal banner. Product shown in a lifestyle or clean studio context on one side; the other side lists 2-3 short benefit callouts as clean icon-style badges or checkmarks.
+BENEFITS TO SHOW: ${benefits.length > 0 ? benefits.join(" · ") : "the product's most compelling everyday benefits"}.
+${brief.targetAudience ? `Frame benefits for this audience: ${brief.targetAudience}.` : ""}
+LIGHTING: Bright, clean, professional studio lighting.
+ASPECT: Wide banner 1200×600 pixels (2:1 ratio). Output at 1200x600. NO watermark, NO AI label.`;
+  }
+
+  // ── Flipkart RPD: Feature Banner 3 (Material) ────────────────────────────────
+  if (imageType === "Flipkart Feature Banner 3") {
+    return `You are an expert Flipkart Rich Product Description (RPD) designer. Create a Flipkart RPD Feature Banner focused on material quality.
+
+PRODUCT: ${brief.productName}${brief.brandName ? ` by ${brief.brandName}` : ""}.
+COMPOSITION: Wide horizontal banner combining a macro/close-up shot of the product's material or finish on one side with a short headline about material quality on the other side.
+MATERIAL: ${brief.material ? `${brief.material} — emphasize how this material feels and performs.` : "Emphasize the product's premium build materials and finish."}
+LIGHTING: Directional lighting that reveals texture and craftsmanship.
+ASPECT: Wide banner 1200×600 pixels (2:1 ratio). Output at 1200x600. NO watermark, NO AI label.`;
+  }
+
+  // ── Flipkart RPD: Feature Banner 4 (Technology) ──────────────────────────────
+  if (imageType === "Flipkart Feature Banner 4") {
+    return `You are an expert Flipkart Rich Product Description (RPD) designer. Create a Flipkart RPD Feature Banner focused on technology or functional innovation.
+
+PRODUCT: ${brief.productName}${brief.brandName ? ` by ${brief.brandName}` : ""}.
+COMPOSITION: Wide horizontal banner. Product shown alongside a clean technical/schematic-style visual element (subtle diagram lines, glow accents, or callout arrows) that communicates a technology or mechanism, paired with a short headline.
+TECHNOLOGY / FUNCTION: ${brief.keyFeatures.slice(1, 3).length > 0 ? brief.keyFeatures.slice(1, 3).join(", ") : "the product's core functional innovation"}.
+${brief.brandColors.length > 0 ? `Use brand colors ${brief.brandColors.join(", ")} for technical accent elements.` : "Use a cool, modern accent color (electric blue, teal, or graphite) for technical accents."}
+ASPECT: Wide banner 1200×600 pixels (2:1 ratio). Output at 1200x600. NO watermark, NO AI label.`;
+  }
+
+  // ── Flipkart RPD: Lifestyle Banner ───────────────────────────────────────────
+  if (imageType === "Flipkart Lifestyle Banner") {
+    return `You are an expert Flipkart Rich Product Description (RPD) designer. Create a Flipkart RPD Lifestyle Banner.
+
+PRODUCT: ${brief.productName}${brief.brandName ? ` by ${brief.brandName}` : ""}.
+COMPOSITION: FULL-BLEED wide banner — the product naturally integrated into a realistic, aspirational ${brief.targetAudience || "everyday"} scene, genuinely being used. Warm, editorial lighting with the product in sharp focus and background softly blurred.
+${brief.keyFeatures.length > 0 ? `Subtly convey: ${brief.keyFeatures.slice(0, 2).join(" and ")}.` : ""}
+ASPECT: Wide banner 1200×600 pixels (2:1 ratio). Output at 1200x600. NO watermark, NO AI label.`;
+  }
+
+  // ── Flipkart RPD: Infographic ────────────────────────────────────────────────
+  if (imageType === "Flipkart Infographic") {
+    const features = brief.keyFeatures.length > 0 ? brief.keyFeatures : ["Premium Quality", "Smart Design", "Built to Last"];
+    return `You are an expert Flipkart Rich Product Description (RPD) designer. Create a Flipkart RPD Infographic module.
+
+PRODUCT: ${brief.productName}${brief.brandName ? ` by ${brief.brandName}` : ""}.
+COMPOSITION: Square module. Product shown centered or in the upper portion as a clean hero shot, with ${features.length} feature callouts arranged around it as icon-style badges connected by thin leader lines — classic feature-icon infographic layout.
+FEATURES:\n${features.map((f, i) => `  ${i + 1}. ${f}`).join("\n")}
+${brief.brandColors.length > 0 ? `Use brand colors ${brief.brandColors.join(", ")} for icons and accent lines.` : "Use a cohesive accent color for all icons and leader lines."}
+STYLE: Clean, modern, editorial infographic — not cluttered.
+ASPECT: Square 1200×1200 pixels. Output at 1200x1200. NO watermark, NO AI label.`;
+  }
+
+  // ── Flipkart RPD: Dimensions ─────────────────────────────────────────────────
+  if (imageType === "Flipkart Dimensions Graphic") {
+    return `You are an expert Flipkart Rich Product Description (RPD) designer. Create a Flipkart RPD Dimensions module.
+
+PRODUCT: ${brief.productName}${brief.brandName ? ` by ${brief.brandName}` : ""}.
+COMPOSITION: Square module. Product shown from a clean, dimensionally-readable angle on a light neutral background, with precise technical-drawing-style dimension callout lines and labels (${brief.dimensions || "realistic proportions for this product category"}) in cm or mm.
+${brief.weight ? `Include a small weight label: ${brief.weight}.` : ""}
+STYLE: Minimal, precise, spec-sheet quality — thin lines, consistent modern sans-serif labels.
+ASPECT: Square 1200×1200 pixels. Output at 1200x1200. NO watermark, NO AI label.`;
+  }
+
+  // ── Flipkart RPD: Comparison Chart ───────────────────────────────────────────
+  if (imageType === "Flipkart Comparison Chart") {
+    return `You are an expert Flipkart Rich Product Description (RPD) designer. Create a Flipkart RPD Comparison Chart module.
+
+PRODUCT: ${brief.productName}${brief.brandName ? ` by ${brief.brandName}` : ""}.
+COMPOSITION: Square module styled as a clean comparison table/chart. ${brief.productName} is shown as the featured column (highlighted with a subtle accent border or badge, e.g. "This Product"), compared against 1-2 generic alternative columns across 3-4 attribute rows.
+ATTRIBUTES TO COMPARE: ${brief.keyFeatures.length > 0 ? brief.keyFeatures.slice(0, 4).join(", ") : "quality, material, durability, value"}. Use checkmarks/crosses or short values per cell.
+${brief.brandColors.length > 0 ? `Use brand colors ${brief.brandColors.join(", ")} to highlight the featured product's column.` : "Use a clear accent color to highlight the featured product's column."}
+STYLE: Clean, legible chart typography — think spec-comparison table from a premium electronics listing.
+ASPECT: Square 1200×1200 pixels. Output at 1200x1200. NO watermark, NO AI label.`;
+  }
+
+  // ── Flipkart RPD: Brand Story ─────────────────────────────────────────────────
+  if (imageType === "Flipkart Brand Story") {
+    return `You are an expert Flipkart Rich Product Description (RPD) designer. Create a Flipkart RPD Brand Story banner.
+
+PRODUCT: ${brief.productName}${brief.brandName ? ` by ${brief.brandName}` : ""}.
+COMPOSITION: Wide editorial banner. The product shown in a warm, premium lifestyle or studio context as the emotional anchor, with a subtle brand mark (${brief.brandName || "brand name"}) in elegant small typography and a short brand story line.
+TRUST ELEMENTS: ${brief.countryOfOrigin ? `Made in ${brief.countryOfOrigin}. ` : ""}${brief.warranty ? `${brief.warranty}.` : ""}
+STYLE: Warm, trustworthy, premium lookbook photography — elegant, not cold.
+ASPECT: Wide banner 1440×600 pixels (2.4:1 ratio). Output at 1440x600. NO watermark, NO AI label.`;
+  }
+
+  // ── Flipkart RPD: FAQ Graphic ─────────────────────────────────────────────────
+  if (imageType === "Flipkart FAQ Graphic") {
+    return `You are an expert Flipkart Rich Product Description (RPD) designer. Create a Flipkart RPD FAQ Graphic module.
+
+PRODUCT: ${brief.productName}${brief.brandName ? ` by ${brief.brandName}` : ""}.
+COMPOSITION: Square module styled as a clean FAQ card layout — 2-3 short question/answer pairs stacked vertically, each with a bold question line and a short one-sentence answer beneath it. A small product thumbnail or icon anchors the top of the module.
+LIKELY QUESTIONS to address (craft natural Q&A around these): sizing/fit or compatibility, material/care, ${brief.warranty ? "warranty coverage" : "durability"}.
+${brief.brandColors.length > 0 ? `Use brand colors ${brief.brandColors.join(", ")} for question headers.` : ""}
+STYLE: Clean, legible, trustworthy — like a premium listing's help section.
+ASPECT: Square 1200×1200 pixels. Output at 1200x1200. NO watermark, NO AI label.`;
+  }
+
+  // ── Flipkart RPD: Warranty / Trust ────────────────────────────────────────────
+  if (imageType === "Flipkart Warranty Trust") {
+    return `You are an expert Flipkart Rich Product Description (RPD) designer. Create a Flipkart RPD Warranty & Trust module.
+
+PRODUCT: ${brief.productName}${brief.brandName ? ` by ${brief.brandName}` : ""}.
+COMPOSITION: Square module. Product shown cleanly on one portion of the frame, paired with trust badges/icons for warranty and certifications arranged neatly beside or beneath it.
+TRUST ELEMENTS: ${brief.warranty ? `✓ ${brief.warranty}` : "✓ Manufacturer Warranty"}. ${brief.countryOfOrigin ? `Made in ${brief.countryOfOrigin}.` : ""} ${brief.specialOffers ? `Offer: ${brief.specialOffers}.` : ""}
+STYLE: Clean, reassuring, premium badge design — like a certification seal on a trusted product page.
+ASPECT: Square 1200×1200 pixels. Output at 1200x1200. NO watermark, NO AI label.`;
   }
 
   // Fallback for any unlisted types
