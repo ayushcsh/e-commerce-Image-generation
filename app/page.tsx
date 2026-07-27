@@ -325,9 +325,9 @@ export default function Home() {
               </p>
               <h1 className="heroTitle">
                 <span className="langEnglish">
-                  <span>HELL<AccentO /></span>
                   <span>EC<AccentO />MMERCE</span>
-                  <span>VEND<AccentO />RS!</span>
+                  <span>BUSINESS</span>
+                  <span><AccentO />WNERS</span>
                 </span>
                 <span className="langHindi">
                   <span>नमस्ते</span>
