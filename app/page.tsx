@@ -326,10 +326,12 @@ export default function Home() {
               <h1 className="heroTitle">
                 <span className="langEnglish">
                   <span>HELL<AccentO /></span>
+                  <span>EC<AccentO />MMERCE</span>
                   <span>VEND<AccentO />RS!</span>
                 </span>
                 <span className="langHindi">
                   <span>नमस्ते</span>
+                  <span>ई-कॉमर्स</span>
                   <span>विक्रेताओ!</span>
                 </span>
               </h1>
@@ -550,27 +552,89 @@ export default function Home() {
           </div>
         </div>
 
+        <div className="footerMain">
+          <div className="footerCol footerColBrand">
+            <div className="footerLogo">
+              <span className="footerLogoMark">VF</span>
+              <span className="footerLogoText">VendorFlow</span>
+            </div>
+            <p className="footerTagline">
+              AI product image generation for online sellers. No shortcuts, no fake promises.
+            </p>
+
+            <span className="footerBuiltBy">Built &amp; supported by <strong>Kriscel Tech</strong></span>
+            <div className="footerContactList">
+              <a className="footerContactRow" href="tel:+918985419420">
+                <span className="footerContactIcon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
+                  </svg>
+                </span>
+                <span>+91 89854 19420</span>
+              </a>
+              <a className="footerContactRow" href="mailto:info@kriscel.com">
+                <span className="footerContactIcon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M4 4h16v16H4z" />
+                    <path d="m4 6 8 7 8-7" />
+                  </svg>
+                </span>
+                <span>info@kriscel.com</span>
+              </a>
+              <div className="footerContactRow">
+                <span className="footerContactIcon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
+                    <circle cx="12" cy="10" r="3" />
+                  </svg>
+                </span>
+                <span>229, Bharthal, Sector 26, Dwarka, South West Delhi, 110077</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="footerCol">
+            <h3 className="footerColTitle">Quick Links</h3>
+            <nav className="footerLinksNav" aria-label="Footer navigation">
+              {navItems.filter((item) => item.label !== "FAQ").map((item) => (
+                <a key={item.href} href={item.href}>{item.label}</a>
+              ))}
+            </nav>
+          </div>
+
+          <div className="footerCol">
+            <h3 className="footerColTitle">Follow Us</h3>
+            <p className="footerFollowCopy">
+              Connect with us on our social media platforms for the latest updates in AI and automation.
+            </p>
+            <div className="footerSocialGrid">
+              <a className="footerSocialBtn" href="https://in.linkedin.com/company/kriscel-tech-pvt-ltd" target="_blank" rel="noopener noreferrer">
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM3 9h4v12H3zM9 9h3.83v1.64h.05c.53-1 1.85-2.05 3.8-2.05 4.07 0 4.82 2.68 4.82 6.16V21h-4v-5.6c0-1.34-.02-3.06-1.87-3.06-1.87 0-2.16 1.46-2.16 2.97V21H9z" /></svg>
+                LinkedIn
+              </a>
+              <a className="footerSocialBtn" href="https://www.instagram.com/krisceltech/" target="_blank" rel="noopener noreferrer">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="5" /><circle cx="12" cy="12" r="4" /><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" /></svg>
+                Instagram
+              </a>
+              <a className="footerSocialBtn" href="https://www.facebook.com/KriscelTech/" target="_blank" rel="noopener noreferrer">
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13.5 21v-8h2.7l.4-3.2h-3.1V7.7c0-.93.26-1.56 1.6-1.56H16.7V3.14C16.16 3.08 15.28 3 14.26 3c-2.13 0-3.6 1.3-3.6 3.68v2.12H8v3.2h2.66V21z" /></svg>
+                Facebook
+              </a>
+              <a className="footerSocialBtn" href="https://www.youtube.com/@krisceltech" target="_blank" rel="noopener noreferrer">
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M22 8.3s-.2-1.55-.82-2.23c-.78-.86-1.66-.87-2.06-.92C16.24 5 12 5 12 5s-4.24 0-7.12.15c-.4.05-1.28.06-2.06.92C2.2 6.75 2 8.3 2 8.3S1.8 10.1 1.8 11.9v1.2c0 1.8.2 3.6.2 3.6s.2 1.55.82 2.23c.78.86 1.8.83 2.26.92C6.6 19.98 12 20 12 20s4.24-.01 7.12-.16c.4-.05 1.28-.06 2.06-.92.62-.68.82-2.23.82-2.23s.2-1.8.2-3.6v-1.2c0-1.8-.2-3.6-.2-3.6zM9.9 14.9V8.9l5.4 3z" /></svg>
+                YouTube
+              </a>
+              <a className="footerSocialBtn footerSocialBtnWide" href="https://wa.me/918985419420" target="_blank" rel="noopener noreferrer">
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.5 14.4c-.3-.15-1.77-.87-2.04-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.94 1.16-.17.2-.35.22-.65.07-.3-.15-1.26-.46-2.4-1.47-.89-.79-1.48-1.77-1.66-2.07-.17-.3-.02-.46.13-.61.14-.14.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.07-.15-.67-1.6-.9-2.2-.24-.58-.48-.5-.67-.5-.17-.01-.37-.01-.57-.01s-.52.07-.8.37c-.27.3-1.04 1.02-1.04 2.47s1.07 2.87 1.22 3.07c.15.2 2.1 3.2 5.08 4.49.71.31 1.26.49 1.7.63.71.22 1.36.19 1.87.12.57-.09 1.77-.72 2.02-1.42.25-.7.25-1.3.17-1.42-.07-.12-.27-.2-.57-.35zM12.04 21.9h-.01a9.87 9.87 0 0 1-5.03-1.38l-.36-.21-3.74.98 1-3.64-.24-.38a9.86 9.86 0 0 1-1.51-5.26c0-5.45 4.44-9.89 9.9-9.89 2.64 0 5.13 1.03 6.99 2.9a9.82 9.82 0 0 1 2.9 6.99c0 5.45-4.45 9.89-9.9 9.89zm8.41-18.3A11.82 11.82 0 0 0 12.03 0C5.5 0 .2 5.3.2 11.83c0 2.08.55 4.12 1.58 5.92L.1 24l6.4-1.68a11.86 11.86 0 0 0 5.53 1.41h.01c6.53 0 11.83-5.3 11.83-11.83 0-3.16-1.23-6.13-3.42-8.3z" /></svg>
+                WhatsApp
+              </a>
+            </div>
+          </div>
+        </div>
+
         <div className="footerBottom">
-          <div className="footerBrand">
-            <strong>AI Product Image Generator</strong>
-            <span>Marketplace visuals from one product photo.</span>
-          </div>
-
-          <nav aria-label="Footer navigation">
-            <a href="#home">Work</a>
-            <a href="#about">Benefits</a>
-            <a href="#services">Workflow</a>
-            <a href="#contact">Contact</a>
-          </nav>
-
-          <div className="footerChannels" aria-label="Contact channels">
-            <a href="mailto:hello@productvisuals.ai">Email</a>
-            <a href="#contact">Chat</a>
-            <a href="#contact">Support</a>
-          </div>
-
           <div className="footerCopy">
-            <span>© Copyright 2026 Product Visuals</span>
+            <span>© {new Date().getFullYear()} Product Visuals. All rights reserved.</span>
             <span className="footerCredit">Developed &amp; designed by <strong>Kriscel Tech</strong></span>
           </div>
           <a className="footerPrivacy" href="#contact">Privacy Policy</a>

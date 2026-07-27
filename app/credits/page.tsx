@@ -4,7 +4,7 @@ import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { Suspense, useEffect, useState } from "react";
 import { signOut } from "next-auth/react";
-import { CREDIT_PLANS, GST_RATE, isCreditPlanId, splitGstInclusive, type CreditPlanId } from "@/lib/pricing";
+import { CREDIT_PLANS, isCreditPlanId, type CreditPlanId } from "@/lib/pricing";
 
 type Transaction = {
   id: string;
@@ -22,32 +22,50 @@ const PLAN_BADGES: Partial<Record<CreditPlanId, string>> = {
 };
 
 function StatusBanners() {
-  const [showSuccess, setShowSuccess] = useState(false);
   const [showCanceled, setShowCanceled] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    setShowSuccess(params.get("success") === "true");
     setShowCanceled(params.get("canceled") === "true");
   }, []);
 
-  if (!showSuccess && !showCanceled) return null;
+  if (!showCanceled) return null;
 
   return (
-    <>
-      {showSuccess && (
-        <div className="creditsNotice isSuccess">
-          <span>Payment received — credits have been added to your account.</span>
-          <button className="creditsNoticeClose" onClick={() => setShowSuccess(false)}>✕</button>
+    <div className="creditsNotice">
+      <span>Payment was canceled — your credits are unchanged.</span>
+      <button className="creditsNoticeClose" onClick={() => setShowCanceled(false)}>✕</button>
+    </div>
+  );
+}
+
+function PaymentSuccessPopup({ show, onClose }: { show: boolean; onClose: () => void }) {
+  if (!show) return null;
+
+  return (
+    <div className="paySuccessOverlay" onClick={onClose}>
+      <div className="paySuccessCard" onClick={(e) => e.stopPropagation()}>
+        <div className="paySuccessConfetti" aria-hidden="true">
+          {Array.from({ length: 14 }).map((_, i) => (
+            <span key={i} className="paySuccessConfettiPiece" />
+          ))}
         </div>
-      )}
-      {showCanceled && (
-        <div className="creditsNotice">
-          <span>Payment was canceled — your credits are unchanged.</span>
-          <button className="creditsNoticeClose" onClick={() => setShowCanceled(false)}>✕</button>
+
+        <button className="paySuccessClose" type="button" onClick={onClose} aria-label="Close">✕</button>
+
+        <div className="paySuccessCheck" aria-hidden="true">
+          <svg viewBox="0 0 52 52">
+            <circle className="paySuccessCheckCircle" cx="26" cy="26" r="23" fill="none" />
+            <path className="paySuccessCheckMark" fill="none" d="M14 27l7 7 17-17" />
+          </svg>
         </div>
-      )}
-    </>
+
+        <h2>Payment successful!</h2>
+        <p>Your credits have been added to your account.</p>
+
+        <button className="paySuccessBtn" type="button" onClick={onClose}>Continue</button>
+      </div>
+    </div>
   );
 }
 
@@ -63,10 +81,6 @@ function ReceiptModal({
   const plan = isCreditPlanId(transaction.planId) ? CREDIT_PLANS[transaction.planId] : undefined;
   const created = new Date(transaction.createdAt);
   const orderId = (transaction.orderId || transaction.id || "").slice(-10).toUpperCase();
-  const { base, gst } = typeof transaction.priceInr === "number"
-    ? splitGstInclusive(transaction.priceInr)
-    : { base: 0, gst: 0 };
-  const inr = (n: number) => `₹${n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   return (
     <div className="receiptOverlay" onClick={onClose}>
@@ -100,23 +114,6 @@ function ReceiptModal({
         </div>
         <div className="receiptDivider" />
 
-        {typeof transaction.priceInr === "number" && (
-          <div className="receiptTaxBlock">
-            <div className="receiptSubRow">
-              <span>Taxable Amount</span>
-              <span>{inr(base)}</span>
-            </div>
-            <div className="receiptSubRow">
-              <span>CGST ({(GST_RATE * 50).toFixed(1)}%)</span>
-              <span>{inr(gst / 2)}</span>
-            </div>
-            <div className="receiptSubRow">
-              <span>SGST ({(GST_RATE * 50).toFixed(1)}%)</span>
-              <span>{inr(gst / 2)}</span>
-            </div>
-          </div>
-        )}
-
         <div className="receiptTotalRow">
           <span>Total Paid</span>
           <span>
@@ -125,7 +122,6 @@ function ReceiptModal({
               : "—"}
           </span>
         </div>
-        <div className="receiptTotalNote">Inclusive of {(GST_RATE * 100).toFixed(0)}% GST</div>
 
         <div className="receiptDivider receiptDividerDashed" />
 
@@ -161,6 +157,7 @@ export default function CreditsPage() {
   const [loading, setLoading] = useState(true);
   const [buyingPlan, setBuyingPlan] = useState<string | null>(null);
   const [viewingTx, setViewingTx] = useState<Transaction | null>(null);
+  const [showPaySuccess, setShowPaySuccess] = useState(false);
 
   useEffect(() => {
     fetch("/api/credits")
@@ -172,6 +169,32 @@ export default function CreditsPage() {
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("success") === "true") setShowPaySuccess(true);
+  }, []);
+
+  // Re-fetch on close (not just reuse state) since the webhook that adds the
+  // purchase transaction can still be landing while the success animation plays.
+  async function closePaySuccess() {
+    setShowPaySuccess(false);
+    const url = new URL(window.location.href);
+    url.searchParams.delete("success");
+    window.history.replaceState({}, "", url.toString());
+
+    try {
+      const res = await fetch("/api/credits");
+      const data = await res.json();
+      const txs: Transaction[] = data.transactions ?? [];
+      setBalance(data.balance ?? 0);
+      setTransactions(txs);
+      const latestPurchase = txs.find((tx) => typeof tx.priceInr === "number");
+      if (latestPurchase) setViewingTx(latestPurchase);
+    } catch {
+      // Bill just won't auto-open — the transaction still shows in history once loaded.
+    }
+  }
 
   async function buyPlan(planId: string) {
     setBuyingPlan(planId);
@@ -225,6 +248,7 @@ export default function CreditsPage() {
         <Suspense fallback={null}>
           <StatusBanners />
         </Suspense>
+        <PaymentSuccessPopup show={showPaySuccess} onClose={closePaySuccess} />
 
         {/* Balance */}
         <div className="creditsBalance">

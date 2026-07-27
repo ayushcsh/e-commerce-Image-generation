@@ -127,3 +127,46 @@ export async function sendReceiptEmail(input: ReceiptEmailInput): Promise<void> 
     console.error("[email] Failed to send receipt email:", err);
   }
 }
+
+function verificationHtml(code: string): string {
+  return `
+  <div style="background:#f8fafc;padding:32px 16px;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
+    <table role="presentation" width="100%" style="max-width:380px;margin:0 auto;border-collapse:collapse;">
+      <tr>
+        <td style="background:#ffffff;border:2px solid #000000;border-radius:18px;padding:34px 28px 28px;text-align:center;">
+          <div style="margin-bottom:22px;">
+            <span style="display:inline-block;width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#0ea5e9,#2563eb);color:#fff;font-size:11px;font-weight:800;line-height:28px;text-align:center;vertical-align:middle;">VF</span>
+            <span style="font-size:19px;font-weight:900;color:#0f172a;vertical-align:middle;margin-left:8px;">VendorFlow</span>
+          </div>
+          <div style="font-size:14px;color:#64748b;margin-bottom:18px;">Enter this code to verify your email address:</div>
+          <div style="font-size:34px;font-weight:900;letter-spacing:0.18em;color:#0f172a;margin-bottom:18px;">${code}</div>
+          <div style="font-size:12px;color:#94a3b8;">This code expires in 10 minutes. If you didn't request this, you can ignore this email.</div>
+        </td>
+      </tr>
+    </table>
+  </div>`;
+}
+
+/**
+ * Fire-and-forget, same as sendReceiptEmail — a missing API key or send
+ * failure must not break registration; the caller still returns the code
+ * so the flow can be retried via the resend endpoint.
+ */
+export async function sendVerificationEmail(to: string, code: string): Promise<void> {
+  const resend = getResend();
+  if (!resend) {
+    console.warn("[email] RESEND_API_KEY not set — skipping verification email.");
+    return;
+  }
+
+  try {
+    await resend.emails.send({
+      from: process.env.RESEND_FROM_EMAIL || "VendorFlow <onboarding@resend.dev>",
+      to,
+      subject: `Your VendorFlow verification code: ${code}`,
+      html: verificationHtml(code),
+    });
+  } catch (err) {
+    console.error("[email] Failed to send verification email:", err);
+  }
+}

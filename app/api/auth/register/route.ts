@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import clientPromise from "@/lib/mongodb";
 import { grantWelcomeBonusIfNew } from "@/lib/credits";
+import { issueVerificationCode } from "@/lib/emailVerification";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -73,8 +74,16 @@ export async function POST(request: NextRequest) {
     // Grant 1 free credit on signup
     await grantWelcomeBonusIfNew(result.insertedId.toString());
 
+    // Sign-in stays blocked until this code is confirmed via /api/auth/verify-email.
+    await issueVerificationCode(email);
+
     return NextResponse.json(
-      { id: result.insertedId.toString(), email, message: "Account created. You can now sign in." },
+      {
+        id: result.insertedId.toString(),
+        email,
+        needsVerification: true,
+        message: "Account created. Check your email for a verification code.",
+      },
       { status: 201 }
     );
   } catch (err) {

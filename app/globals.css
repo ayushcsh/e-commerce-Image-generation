@@ -3016,6 +3016,22 @@
   line-height: 1.6;
 }
 
+.linkButton {
+  background: none;
+  border: none;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.linkButton:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
 /* ── History Sidebar ──────────────────────────────────────────────────────── */
 .historyBackdrop {
   position: fixed;
@@ -3991,6 +4007,7 @@ p {
   display: inline-grid;
   align-items: center;
   min-height: 42px;
+  margin-top: -70px;
   margin-left: clamp(46px, 6vw, 76px);
   padding: 4px 38px 4px 20px;
   border: 2px solid var(--ink);
@@ -4394,6 +4411,7 @@ p {
 }
 
 .footerCta,
+.footerMain,
 .footerBottom {
   position: relative;
   z-index: 2;
@@ -4464,32 +4482,196 @@ p {
   transform: translateY(-2px);
 }
 
-.footerBottom {
+/* ── Footer: brand/contact + quick links + social columns ── */
+.footerMain {
   display: grid;
-  grid-template-columns: minmax(240px, 1fr) auto;
-  grid-template-areas:
-    "brand privacy"
-    "nav channels"
-    "copy channels";
-  gap: 18px clamp(24px, 5vw, 72px);
-  align-items: end;
+  grid-template-columns: 1.3fr 1fr 1.3fr;
+  gap: clamp(28px, 5vw, 64px);
   padding-top: clamp(34px, 4.5vw, 62px);
+  padding-bottom: clamp(30px, 4vw, 48px);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.footerBrand {
-  grid-area: brand;
+.footerCol {
   display: grid;
-  gap: 7px;
+  gap: 14px;
+  align-content: start;
 }
 
-.footerBrand strong {
+.footerColTitle {
+  margin: 0;
   color: #ffffff;
-  font-size: 1rem;
+  font-size: 0.78rem;
   font-weight: 950;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
-.footerBrand span,
+.footerLogo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.footerLogoMark {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #0ea5e9, #2563eb);
+  color: #ffffff;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.footerLogoText {
+  color: #ffffff;
+  font-size: 1.05rem;
+  font-weight: 950;
+}
+
+.footerTagline,
+.footerFollowCopy {
+  margin: 0;
+  max-width: 34ch;
+  color: rgba(255, 255, 255, 0.62);
+  font-family: var(--font-minimal);
+  font-size: 0.88rem;
+  font-weight: 600;
+  line-height: 1.55;
+}
+
+.footerBuiltBy {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.footerBuiltBy strong {
+  color: var(--primary);
+}
+
+.footerContactList {
+  display: grid;
+  gap: 10px;
+  margin-top: 2px;
+}
+
+.footerContactRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: rgba(255, 255, 255, 0.78);
+  font-family: var(--font-minimal);
+  font-size: 0.86rem;
+  font-weight: 650;
+  transition: color 160ms ease;
+}
+
+a.footerContactRow:hover,
+a.footerContactRow:focus-visible {
+  color: var(--primary);
+  outline: 0;
+}
+
+.footerContactIcon {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: rgba(14, 165, 233, 0.14);
+  color: var(--primary);
+}
+
+.footerContactIcon svg {
+  width: 15px;
+  height: 15px;
+}
+
+.footerLinksNav {
+  display: grid;
+  gap: 10px;
+}
+
+.footerLinksNav a {
+  width: max-content;
+  color: rgba(255, 255, 255, 0.72);
+  font-family: var(--font-minimal);
+  font-size: 0.9rem;
+  font-weight: 700;
+  transition: color 160ms ease, transform 160ms ease;
+}
+
+.footerLinksNav a:hover,
+.footerLinksNav a:focus-visible {
+  color: var(--primary);
+  outline: 0;
+  transform: translateX(2px);
+}
+
+.footerSocialGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 2px;
+}
+
+.footerSocialBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #ffffff;
+  font-family: var(--font-minimal);
+  font-size: 0.82rem;
+  font-weight: 800;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    transform 160ms ease;
+}
+
+.footerSocialBtn svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+}
+
+.footerSocialBtn:hover,
+.footerSocialBtn:focus-visible {
+  background: rgba(14, 165, 233, 0.16);
+  border-color: var(--primary);
+  outline: 0;
+  transform: translateY(-1px);
+}
+
+.footerSocialBtnWide {
+  grid-column: 1 / -1;
+}
+
+.footerBottom {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding-top: clamp(20px, 3vw, 28px);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.footerCopy {
+  display: grid;
+  gap: 4px;
+}
+
 .footerCopy,
 .footerBottom a {
   color: rgba(255, 255, 255, 0.68);
@@ -4498,67 +4680,15 @@ p {
   font-weight: 700;
 }
 
-.footerBottom nav {
-  grid-area: nav;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 22px;
-}
-
-.footerBottom nav a,
 .footerPrivacy {
-  transition:
-    color 160ms ease,
-    transform 160ms ease;
+  transition: color 160ms ease, transform 160ms ease;
 }
 
-.footerBottom nav a:hover,
-.footerBottom nav a:focus-visible,
 .footerPrivacy:hover,
 .footerPrivacy:focus-visible {
   color: var(--primary);
   outline: 0;
   transform: translateY(-1px);
-}
-
-.footerChannels {
-  grid-area: channels;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  justify-content: end;
-}
-
-.footerChannels a {
-  display: grid;
-  min-height: 32px;
-  place-items: center;
-  border: 1px solid rgba(255, 255, 255, 0.42);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
-  color: #ffffff;
-  padding: 0 14px;
-  font-size: 0.76rem;
-  font-weight: 950;
-  line-height: 1;
-  text-transform: uppercase;
-}
-
-.footerChannels a:hover,
-.footerChannels a:focus-visible {
-  background: var(--primary);
-  border-color: var(--primary);
-  color: var(--ink);
-  outline: 0;
-}
-
-.footerCopy {
-  grid-area: copy;
-}
-
-.footerPrivacy {
-  grid-area: privacy;
-  justify-self: end;
 }
 
 /* ── Workflow Steps ── */
@@ -4852,32 +4982,27 @@ p {
     grid-template-columns: 1fr;
   }
 
-  .footerBottom {
+  .footerMain {
     grid-template-columns: 1fr;
-    grid-template-areas:
-      "brand"
-      "nav"
-      "channels"
-      "copy"
-      "privacy";
     justify-items: center;
     text-align: center;
   }
 
-  .footerBottom nav {
-    justify-content: center;
-  }
-
-  .footerChannels {
-    justify-content: center;
-  }
-
-  .footerPrivacy {
-    justify-self: center;
-  }
-
-  .footerBrand {
+  .footerLinksNav {
     justify-items: center;
+  }
+
+  .footerContactList,
+  .footerContactRow {
+    justify-items: center;
+  }
+
+  .footerSocialGrid {
+    max-width: 360px;
+  }
+
+  .footerBottom {
+    justify-content: center;
     text-align: center;
   }
 
@@ -5289,6 +5414,202 @@ p {
 }
 .receiptClose:hover { background: var(--ink); color: #fff; }
 
+/* ── Payment success popup ── */
+.paySuccessOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 950;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: fadeIn 180ms ease;
+}
+
+.paySuccessCard {
+  position: relative;
+  width: min(380px, 100%);
+  padding: 44px 32px 32px;
+  border: 2px solid var(--ink);
+  border-radius: 22px;
+  background: #ffffff;
+  color: var(--ink);
+  box-shadow: 10px 10px 0 var(--ink);
+  text-align: center;
+  overflow: hidden;
+  font-family: var(--font-minimal);
+  animation: paySuccessPop 480ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.paySuccessClose {
+  position: absolute;
+  z-index: 2;
+  top: 14px;
+  right: 14px;
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid rgba(15, 23, 42, 0.15);
+  border-radius: 50%;
+  background: #ffffff;
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 0.8rem;
+  line-height: 1;
+}
+
+.paySuccessClose:hover {
+  background: var(--ink);
+  color: #fff;
+}
+
+.paySuccessCheck {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  width: 84px;
+  height: 84px;
+  margin: 0 auto;
+  place-items: center;
+}
+
+.paySuccessCheck svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.paySuccessCheckCircle {
+  stroke: var(--ink);
+  stroke-width: 2.5;
+  stroke-dasharray: 145;
+  stroke-dashoffset: 145;
+  animation: paySuccessDraw 480ms ease forwards 120ms;
+}
+
+.paySuccessCheckMark {
+  stroke: var(--primary);
+  stroke-width: 4.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 34;
+  stroke-dashoffset: 34;
+  animation: paySuccessDraw 320ms ease forwards 560ms;
+}
+
+.paySuccessCard h2 {
+  position: relative;
+  z-index: 2;
+  margin: 20px 0 8px;
+  font-size: 1.5rem;
+  font-weight: 950;
+}
+
+.paySuccessCard p {
+  position: relative;
+  z-index: 2;
+  margin: 0 0 26px;
+  color: var(--muted);
+  font-size: 0.94rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.paySuccessBtn {
+  position: relative;
+  z-index: 2;
+  display: inline-grid;
+  min-height: 46px;
+  place-items: center;
+  padding: 0 34px;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: var(--primary);
+  color: var(--ink);
+  font-size: 0.9rem;
+  font-weight: 950;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: transform 160ms ease, background-color 160ms ease;
+}
+
+.paySuccessBtn:hover {
+  background: #ffffff;
+  transform: translateY(-2px);
+}
+
+.paySuccessConfetti {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.paySuccessConfettiPiece {
+  position: absolute;
+  top: 86px;
+  left: 50%;
+  width: 9px;
+  height: 9px;
+  opacity: 0;
+  animation: paySuccessConfettiBurst 950ms ease-out forwards;
+  animation-delay: 260ms;
+}
+
+.paySuccessConfettiPiece:nth-child(odd) {
+  border-radius: 2px;
+  background: var(--primary);
+}
+
+.paySuccessConfettiPiece:nth-child(even) {
+  border-radius: 50%;
+  background: var(--ink);
+}
+
+.paySuccessConfettiPiece:nth-child(1)  { --tx: -14px;  --ty: -170px; --rot: 10deg;   animation-delay: 260ms; }
+.paySuccessConfettiPiece:nth-child(2)  { --tx: 84px;   --ty: -150px; --rot: -40deg;  animation-delay: 300ms; }
+.paySuccessConfettiPiece:nth-child(3)  { --tx: 165px;  --ty: -80px;  --rot: 120deg;  animation-delay: 340ms; }
+.paySuccessConfettiPiece:nth-child(4)  { --tx: 185px;  --ty: 15px;   --rot: -60deg;  animation-delay: 280ms; }
+.paySuccessConfettiPiece:nth-child(5)  { --tx: 150px;  --ty: 110px;  --rot: 80deg;   animation-delay: 360ms; }
+.paySuccessConfettiPiece:nth-child(6)  { --tx: 70px;   --ty: 170px;  --rot: -100deg; animation-delay: 320ms; }
+.paySuccessConfettiPiece:nth-child(7)  { --tx: -28px;  --ty: 185px;  --rot: 200deg;  animation-delay: 400ms; }
+.paySuccessConfettiPiece:nth-child(8)  { --tx: -125px; --ty: 140px;  --rot: -140deg; animation-delay: 290ms; }
+.paySuccessConfettiPiece:nth-child(9)  { --tx: -180px; --ty: 55px;   --rot: 60deg;   animation-delay: 370ms; }
+.paySuccessConfettiPiece:nth-child(10) { --tx: -175px; --ty: -55px;  --rot: -30deg;  animation-delay: 330ms; }
+.paySuccessConfettiPiece:nth-child(11) { --tx: -110px; --ty: -145px; --rot: 150deg;  animation-delay: 410ms; }
+.paySuccessConfettiPiece:nth-child(12) { --tx: 0px;    --ty: -200px; --rot: -90deg;  animation-delay: 270ms; }
+.paySuccessConfettiPiece:nth-child(13) { --tx: 125px;  --ty: -130px; --rot: 45deg;   animation-delay: 390ms; }
+.paySuccessConfettiPiece:nth-child(14) { --tx: -62px;  --ty: 165px;  --rot: -170deg; animation-delay: 350ms; }
+
+@keyframes paySuccessPop {
+  0%   { opacity: 0; transform: scale(0.82) translateY(16px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes paySuccessDraw {
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes paySuccessConfettiBurst {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) translate(0, 0) rotate(0deg) scale(0.6);
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) translate(var(--tx), var(--ty)) rotate(var(--rot)) scale(1);
+  }
+}
+
 .receiptBrand {
   display: flex;
   align-items: center;
@@ -5380,39 +5701,17 @@ p {
   font-weight: 850;
 }
 
-.receiptTaxBlock {
-  display: grid;
-  gap: 5px;
-  margin-bottom: 8px;
-}
-
-.receiptSubRow {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: var(--muted);
-}
-
 .receiptTotalRow {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  margin: 4px 0 2px;
-  font-size: 1rem;
+  margin: 10px 0;
+  font-size: 1.1rem;
   font-weight: 950;
 }
 
 .receiptTotalRow span:last-child {
   color: var(--primary);
-}
-
-.receiptTotalNote {
-  font-size: 0.7rem;
-  font-weight: 700;
-  color: var(--muted);
-  text-align: right;
 }
 
 .receiptMeta {

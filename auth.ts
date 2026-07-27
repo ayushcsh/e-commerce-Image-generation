@@ -1,4 +1,4 @@
-import NextAuth from "next-auth";
+import NextAuth, { CredentialsSignin } from "next-auth";
 import Google from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
 import { MongoDBAdapter } from "@auth/mongodb-adapter";
@@ -6,6 +6,12 @@ import bcrypt from "bcryptjs";
 import clientPromise from "@/lib/mongodb";
 import { authConfig } from "@/auth.config";
 import { grantWelcomeBonusIfNew } from "@/lib/credits";
+
+// Surfaced to the login form via signIn()'s returned `code` so it can switch
+// to the OTP-entry screen instead of showing a generic "invalid credentials" error.
+class EmailNotVerifiedError extends CredentialsSignin {
+  code = "email_not_verified";
+}
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
@@ -43,6 +49,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const isValid = await bcrypt.compare(credentials.password as string, user.password);
         if (!isValid) {
           return null;
+        }
+
+        if (!user.emailVerified) {
+          throw new EmailNotVerifiedError();
         }
 
         return {
