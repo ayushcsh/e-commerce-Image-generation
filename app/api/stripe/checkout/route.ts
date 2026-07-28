@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { getStripe } from "@/lib/stripe";
-import { CREDIT_PLANS, isCreditPlanId } from "@/lib/pricing";
+import { isCreditPlanId, getEffectivePlan } from "@/lib/pricing";
 
 export async function POST(request: Request) {
   const session = await auth();
@@ -16,7 +16,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid plan." }, { status: 400 });
   }
 
-  const planConfig = CREDIT_PLANS[plan];
+  const planConfig = getEffectivePlan(plan);
   const priceInr = planConfig.priceInr;
   const credits = planConfig.credits;
   const origin = request.headers.get("origin") || new URL(request.url).origin;

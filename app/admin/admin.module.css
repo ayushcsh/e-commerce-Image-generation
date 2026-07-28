@@ -1,0 +1,460 @@
+.shell {
+  display: flex;
+  min-height: 100vh;
+  background: #f4f6fa;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.sidebar {
+  width: 220px;
+  background: #1a1a2e;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.logo {
+  padding: 24px 20px;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: #e0e0e0;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  padding: 12px 0;
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 20px;
+  color: #a0a0b0;
+  text-decoration: none;
+  font-size: 14px;
+  transition: color 0.15s, background 0.15s;
+}
+
+.navItem:hover {
+  color: #fff;
+  background: rgba(255,255,255,0.06);
+}
+
+.navItem.active {
+  color: #fff;
+  background: rgba(99,102,241,0.25);
+  border-right: 3px solid #818cf8;
+}
+
+.navIcon {
+  font-size: 16px;
+  width: 20px;
+  text-align: center;
+}
+
+.main {
+  flex: 1;
+  padding: 32px 36px;
+  overflow-y: auto;
+}
+
+.pageTitle {
+  font-size: 22px;
+  font-weight: 700;
+  color: #111;
+  margin-bottom: 24px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 22px;
+  border: 1px solid #e8eaf0;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+}
+
+.cardLabel {
+  font-size: 12px;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin-bottom: 8px;
+}
+
+.cardValue {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1a1a2e;
+}
+
+.cardSub {
+  font-size: 12px;
+  color: #aaa;
+  margin-top: 4px;
+}
+
+.section {
+  background: #fff;
+  border-radius: 12px;
+  padding: 24px;
+  border: 1px solid #e8eaf0;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  margin-bottom: 24px;
+}
+
+.sectionTitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: #111;
+  margin-bottom: 16px;
+}
+
+.toolbar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.searchInput {
+  padding: 8px 14px;
+  border: 1.5px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+  min-width: 260px;
+  transition: border-color 0.15s;
+}
+
+.searchInput:focus {
+  border-color: #6366f1;
+}
+
+.select {
+  padding: 8px 12px;
+  border: 1.5px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+  background: #fff;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.select:focus {
+  border-color: #6366f1;
+}
+
+.btn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: opacity 0.15s;
+}
+
+.btn:hover {
+  opacity: 0.85;
+}
+
+.btnPrimary {
+  background: #6366f1;
+  color: #fff;
+}
+
+.btnDanger {
+  background: #ef4444;
+  color: #fff;
+}
+
+.btnGhost {
+  background: #f1f5f9;
+  color: #374151;
+  border: 1.5px solid #e2e8f0;
+}
+
+.btnSm {
+  padding: 5px 10px;
+  font-size: 12px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.table th {
+  text-align: left;
+  padding: 10px 14px;
+  color: #888;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 2px solid #f0f0f5;
+  font-weight: 600;
+}
+
+.table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid #f5f5f8;
+  color: #333;
+  vertical-align: middle;
+}
+
+.table tr:last-child td {
+  border-bottom: none;
+}
+
+.table tr:hover td {
+  background: #fafafa;
+}
+
+.emailCell {
+  font-family: monospace;
+  font-size: 13px;
+  color: #444;
+}
+
+.dateCell {
+  color: #777;
+  font-size: 13px;
+}
+
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.badgeGrant {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.badgeCharge {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.badgeRefund {
+  background: #fef9c3;
+  color: #854d0e;
+}
+
+.badgeDeduct {
+  background: #ffedd5;
+  color: #9a3412;
+}
+
+.badgePositive {
+  color: #15803d;
+  font-weight: 600;
+}
+
+.badgeNegative {
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+.disabledBadge {
+  background: #fee2e2;
+  color: #b91c1c;
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.enabledBadge {
+  background: #dcfce7;
+  color: #15803d;
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.pagination {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+  align-items: center;
+}
+
+.pageInfo {
+  font-size: 13px;
+  color: #888;
+  margin-left: auto;
+}
+
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modalBox {
+  background: #fff;
+  border-radius: 16px;
+  padding: 28px;
+  width: 420px;
+  max-width: 90vw;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+}
+
+.modalTitle {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 20px;
+  color: #111;
+}
+
+.formField {
+  margin-bottom: 14px;
+}
+
+.formLabel {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: #555;
+  margin-bottom: 6px;
+}
+
+.formInput {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1.5px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.15s;
+}
+
+.formInput:focus {
+  border-color: #6366f1;
+}
+
+.formActions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+  justify-content: flex-end;
+}
+
+.formMsg {
+  margin-top: 10px;
+  font-size: 13px;
+  padding: 8px 12px;
+  border-radius: 8px;
+}
+
+.formMsgSuccess {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.formMsgError {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.plansGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.planCard {
+  background: #fff;
+  border: 2px solid #e8eaf0;
+  border-radius: 14px;
+  padding: 22px;
+}
+
+.planName {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1a1a2e;
+  margin-bottom: 4px;
+}
+
+.planCredits {
+  font-size: 22px;
+  font-weight: 700;
+  color: #6366f1;
+  margin-bottom: 4px;
+}
+
+.planCreditsLabel {
+  font-size: 12px;
+  color: #888;
+  margin-bottom: 8px;
+}
+
+.planPrice {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 4px;
+}
+
+.planBonus {
+  font-size: 12px;
+  color: #16a34a;
+  font-weight: 500;
+}
+
+.editRow {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.editLabel {
+  font-size: 14px;
+  color: #555;
+  width: 90px;
+  flex-shrink: 0;
+}
+
+.editInput {
+  flex: 1;
+  padding: 7px 12px;
+  border: 1.5px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.editInput:focus {
+  border-color: #6366f1;
+}

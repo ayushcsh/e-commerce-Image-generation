@@ -158,6 +158,7 @@ export default function CreditsPage() {
   const [buyingPlan, setBuyingPlan] = useState<string | null>(null);
   const [viewingTx, setViewingTx] = useState<Transaction | null>(null);
   const [showPaySuccess, setShowPaySuccess] = useState(false);
+  const [plans, setPlans] = useState<typeof CREDIT_PLANS>(CREDIT_PLANS);
 
   useEffect(() => {
     fetch("/api/credits")
@@ -168,6 +169,15 @@ export default function CreditsPage() {
       })
       .catch(console.error)
       .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/plans")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.plans) setPlans(data.plans);
+      })
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -271,7 +281,7 @@ export default function CreditsPage() {
         <div className="creditsPlans">
           <p className="creditsSectionTitle">Plans</p>
           <div className="creditsPlanList">
-            {(Object.entries(CREDIT_PLANS) as [CreditPlanId, typeof CREDIT_PLANS[CreditPlanId]][]).map(([id, plan]) => (
+            {(Object.entries(plans) as [CreditPlanId, typeof CREDIT_PLANS[CreditPlanId]][]).map(([id, plan]) => (
               <div key={id} className="creditsPlanRow">
                 <div className="creditsPlanInfo">
                   <div className="creditsPlanName">

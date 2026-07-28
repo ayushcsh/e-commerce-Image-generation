@@ -64,6 +64,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     })
   ],
   callbacks: {
+    async signIn({ user }) {
+      if (!user?.email) return true;
+      const client = await clientPromise;
+      const db = client.db(process.env.MONGODB_DB_NAME || "image-generation");
+      const dbUser = await db.collection("users").findOne({ email: user.email.toLowerCase() });
+      if (dbUser?.disabled) return false;
+      return true;
+    },
     async jwt({ token, user, account, profile }) {
       if (user) {
         token.id = user.id as string;

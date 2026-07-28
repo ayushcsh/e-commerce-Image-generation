@@ -20,6 +20,25 @@ export function isCreditPlanId(value: unknown): value is CreditPlanId {
   return value === "starter" || value === "growth" || value === "pro" || value === "business";
 }
 
+// Admin-editable price/credit overrides — persists for the server process
+// lifetime. For production, store in MongoDB (e.g. a small `config` collection).
+const planOverrides = new Map<CreditPlanId, { priceInr: number; credits: number }>();
+
+export function getPlanOverrides(): Partial<Record<CreditPlanId, { priceInr: number; credits: number }>> {
+  return Object.fromEntries(planOverrides);
+}
+
+export function setPlanOverride(id: CreditPlanId, data: { priceInr: number; credits: number }) {
+  planOverrides.set(id, data);
+}
+
+// Plan config with any admin-set overrides applied — this is what checkout
+// and pricing display should use instead of reading CREDIT_PLANS directly.
+export function getEffectivePlan(id: CreditPlanId) {
+  const override = planOverrides.get(id);
+  return override ? { ...CREDIT_PLANS[id], ...override } : CREDIT_PLANS[id];
+}
+
 // GST for digital/SaaS services in India (standard rate). Listed plan prices
 // are GST-inclusive — nothing extra is charged — this only splits the amount
 // already collected into its base + tax components for the invoice/receipt.

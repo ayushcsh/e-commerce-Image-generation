@@ -316,7 +316,9 @@ export default function OnboardingProvider({ children, tourMode = false }: Onboa
 
   function handleSkip() {
     setShowWelcome(false);
-    goNext();
+    setTourActive(false);
+    setCompleted(true);
+    markCompleted();
   }
 
   function handleStart() {
