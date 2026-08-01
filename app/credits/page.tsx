@@ -6,6 +6,40 @@ import { Suspense, useEffect, useState } from "react";
 import { signOut } from "next-auth/react";
 import { CREDIT_PLANS, isCreditPlanId, type CreditPlanId } from "@/lib/pricing";
 
+type RazorpayCheckoutResponse = {
+  razorpay_order_id: string;
+  razorpay_payment_id: string;
+  razorpay_signature: string;
+};
+
+type RazorpayCheckoutOptions = {
+  key: string;
+  amount: number;
+  currency: string;
+  name: string;
+  description: string;
+  order_id: string;
+  prefill?: {
+    name?: string;
+    email?: string;
+  };
+  theme?: {
+    color?: string;
+  };
+  handler: (response: RazorpayCheckoutResponse) => void;
+  modal?: {
+    ondismiss?: () => void;
+  };
+};
+
+declare global {
+  interface Window {
+    Razorpay?: new (options: RazorpayCheckoutOptions) => {
+      open: () => void;
+    };
+  }
+}
+
 type Transaction = {
   id: string;
   type: string;
@@ -21,12 +55,32 @@ const PLAN_BADGES: Partial<Record<CreditPlanId, string>> = {
   growth: "Popular",
 };
 
+function loadRazorpayCheckout() {
+  if (window.Razorpay) return Promise.resolve(true);
+
+  return new Promise<boolean>((resolve) => {
+    const existing = document.querySelector<HTMLScriptElement>("script[src='https://checkout.razorpay.com/v1/checkout.js']");
+    if (existing) {
+      existing.addEventListener("load", () => resolve(true), { once: true });
+      existing.addEventListener("error", () => resolve(false), { once: true });
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.async = true;
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+}
+
 function StatusBanners() {
   const [showCanceled, setShowCanceled] = useState(false);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    setShowCanceled(params.get("canceled") === "true");
+    const canceled = new URLSearchParams(window.location.search).get("canceled") === "true";
+    queueMicrotask(() => setShowCanceled(canceled));
   }, []);
 
   if (!showCanceled) return null;
@@ -181,8 +235,8 @@ export default function CreditsPage() {
   }, []);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("success") === "true") setShowPaySuccess(true);
+    const succeeded = new URLSearchParams(window.location.search).get("success") === "true";
+    if (succeeded) queueMicrotask(() => setShowPaySuccess(true));
   }, []);
 
   // Re-fetch on close (not just reuse state) since the webhook that adds the
@@ -209,20 +263,74 @@ export default function CreditsPage() {
   async function buyPlan(planId: string) {
     setBuyingPlan(planId);
     try {
+      const scriptLoaded = await loadRazorpayCheckout();
+      if (!scriptLoaded || !window.Razorpay) {
+        alert("Could not load Razorpay checkout. Please try again.");
+        setBuyingPlan(null);
+        return;
+      }
+
       const res = await fetch("/api/stripe/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ plan: planId }),
       });
       const data = await res.json();
-      if (data.url) {
-        window.location.href = data.url;
-      } else {
+
+      if (!res.ok || !data.orderId || !data.keyId) {
         alert(data.error || "Could not start checkout. Please try again.");
+        setBuyingPlan(null);
+        return;
       }
+
+      const checkout = new window.Razorpay({
+        key: data.keyId,
+        amount: data.amount,
+        currency: data.currency,
+        name: data.name,
+        description: data.description,
+        order_id: data.orderId,
+        prefill: data.prefill,
+        theme: { color: "#0ea5e9" },
+        modal: {
+          ondismiss: () => {
+            setBuyingPlan(null);
+          },
+        },
+        handler: async (response) => {
+          try {
+            const verifyRes = await fetch("/api/stripe/checkout", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                action: "verify",
+                orderId: response.razorpay_order_id,
+                paymentId: response.razorpay_payment_id,
+                signature: response.razorpay_signature,
+              }),
+            });
+            const verifyData = await verifyRes.json();
+            if (!verifyRes.ok || !verifyData.success) {
+              alert(verifyData.error || "Payment verification failed. Please contact support.");
+              return;
+            }
+
+            const url = new URL(window.location.href);
+            url.searchParams.set("success", "true");
+            url.searchParams.delete("canceled");
+            window.history.replaceState({}, "", url.toString());
+            setShowPaySuccess(true);
+          } catch {
+            alert("Payment verification failed. Please contact support.");
+          } finally {
+            setBuyingPlan(null);
+          }
+        },
+      });
+
+      checkout.open();
     } catch {
       alert("Network error. Please try again.");
-    } finally {
       setBuyingPlan(null);
     }
   }

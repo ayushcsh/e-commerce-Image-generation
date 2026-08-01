@@ -120,8 +120,8 @@ export async function consumeWelcomePopupFlag(userId: string): Promise<boolean> 
 
 /**
  * Atomically increments a user's balance and records the transaction, guarded
- * by an idempotency key (e.g. a Stripe Checkout session ID) so retried
- * webhook deliveries can't double-credit the same payment.
+ * by an idempotency key (e.g. a Razorpay payment ID) so retried webhook
+ * deliveries or client verification retries can't double-credit the same payment.
  */
 export async function addUserCredits(
   userId: string,

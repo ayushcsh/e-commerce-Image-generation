@@ -263,12 +263,16 @@ export default function TourTooltip({
             </button>
           )}
 
+          <button className="tourBtn tourBtnSkip" type="button" onClick={onSkip}>
+            Skip tour
+          </button>
+
           {!hideNext && (
             <button
               className={`tourBtn ${nextDisabled ? "tourBtnNextDisabled" : "tourBtnNext"}`}
               type="button"
               disabled={nextDisabled}
-              onClick={onSkip}
+              onClick={onContinue ?? onNext}
             >
               {nextLabel ?? "Next"}
             </button>

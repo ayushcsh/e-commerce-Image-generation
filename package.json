@@ -16,7 +16,6 @@
     "@fal-ai/client": "^1.10.1",
     "@google/genai": "^2.11.0",
     "@gsap/react": "^2.1.2",
-    "@stripe/stripe-js": "^9.10.0",
     "bcryptjs": "^2.4.3",
     "docx": "^9.7.1",
     "driver.js": "^1.8.0",
@@ -30,8 +29,7 @@
     "react": "latest",
     "react-dom": "latest",
     "resend": "^6.18.0",
-    "sharp": "^0.35.3",
-    "stripe": "^22.3.2"
+    "sharp": "^0.35.3"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",

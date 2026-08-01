@@ -107,7 +107,7 @@ function receiptHtml(input: ReceiptEmailInput): string {
 
 /**
  * Fire-and-forget: a missing API key or a Resend error must never fail the
- * caller (the Stripe webhook still has to return 200 either way).
+ * caller (the payment webhook still has to return 200 either way).
  */
 export async function sendReceiptEmail(input: ReceiptEmailInput): Promise<void> {
   const resend = getResend();

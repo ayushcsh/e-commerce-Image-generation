@@ -91,6 +91,7 @@ export default function TransactionsClient({
             <option value="all">All Types</option>
             <option value="grant">Grants</option>
             <option value="charge">Charges</option>
+            <option value="deduct">Deductions</option>
             <option value="refund">Refunds</option>
           </select>
           <span className={styles.pageInfo}>{total} total records</span>
