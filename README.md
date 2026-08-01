@@ -222,7 +222,7 @@ Generate marketplace listing copy.
 | 1 | CSV export (all marketplaces) | ✅ Done |
 | 2 | Background job queue (BullMQ) | ⬜ Pending |
 | 2 | Progress tracking | ⬜ Pending |
-| 3 | Stripe + credit system | ⬜ Pending |
+| 3 | Razorpay + credit system | ✅ Done |
 | 4 | User dashboard | ⬜ Pending |
 | 4 | Bulk CSV upload | ⬜ Pending |
 | 5 | Cloudflare R2 storage | ⬜ Pending |

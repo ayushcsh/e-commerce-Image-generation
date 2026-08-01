@@ -9,7 +9,7 @@
 
 **Overall Completion: ~45–50%**
 
-The foundation is solid — auth, database, image generation pipeline, and a working studio UI are all in place. The core AI intelligence layer (Vision + Listing generation) is now built and wired into the studio UI. The app still needs a job queue for background processing and Stripe payments, but the core user workflow is functional.
+The foundation is solid — auth, database, image generation pipeline, and a working studio UI are all in place. The core AI intelligence layer (Vision + Listing generation) is now built and wired into the studio UI. The app still needs a job queue for background processing, but Razorpay payments and the credit system are already wired up and the core user workflow is functional.
 
 ---
 
@@ -153,8 +153,8 @@ Implemented in `app/api/listing/route.ts` + `app/studio/page.tsx` ListingPanel. 
 | Image storage | ⚠️ Partial | fal.ai storage used; no R2/S3 |
 | Image generation pipeline | ✅ Done | fal.ai with concurrency control |
 | Job queue (BullMQ) | ❌ | fal.ai subscribe() is synchronous; 31–44s blocking |
-| Credits system | ❌ | No tracking of usage |
-| Stripe payments | ❌ | No billing integration |
+| Credits system | ✅ Done | Balance + transaction history, atomic charge/refund |
+| Razorpay payments | ✅ Done | Order creation, client-side verify, webhook backup |
 | CDN (Cloudflare R2) | ❌ | Images served from fal.ai URLs |
 | Deployment (Vercel) | ❌ | Dev only |
 
@@ -232,7 +232,7 @@ Implemented in `app/api/listing/route.ts` + `app/studio/page.tsx` ListingPanel. 
 ### Phase 4 — Payments & Credits (Week 4–5)
 **Goal: Revenue**
 
-1. Integrate Stripe
+1. Integrate Razorpay ✅ Done
 2. Define credit costs: e.g., 1 product = 10 credits (1 vision call + 1 listing gen + 1 image = 3 credits)
 3. Free tier: 5 products/month
 4. Display credits on dashboard
@@ -268,7 +268,7 @@ Implemented in `app/api/listing/route.ts` + `app/studio/page.tsx` ListingPanel. 
 | Cloudflare R2 | ❌ fal.ai storage | Okay for now |
 | BullMQ + Redis | ❌ Not used | 🔴 Gap |
 | Clerk / Better Auth | ❌ NextAuth v5 | Works fine |
-| Stripe | ❌ Not used | 🔴 Gap |
+| Razorpay | ✅ `lib/razorpay.ts` | Wired up |
 | Vercel | ❌ Dev only | 🔴 Gap |
 | fal.ai | ✅ `lib/fal.ts` | Good |
 | Gemini Vision | ⚠️ `lib/gemini.ts` exists | Not wired up |

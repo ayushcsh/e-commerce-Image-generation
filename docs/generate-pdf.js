@@ -294,7 +294,7 @@ function drawCoverPage() {
   doc.font("Helvetica-Bold").fontSize(10).fillColor(MID)
     .text("Built with:", 156, 344, { width: CONTENT_W, align: "center" });
   doc.font("Helvetica").fontSize(9).fillColor(BRAND)
-    .text("Next.js · MongoDB · Stripe · fal.ai · Gemini AI · Cloudflare R2", 156, 362, { width: CONTENT_W, align: "center" });
+    .text("Next.js · MongoDB · Razorpay · fal.ai · Gemini AI · Cloudflare R2", 156, 362, { width: CONTENT_W, align: "center" });
 
   doc.font("Helvetica").fontSize(10).fillColor(MID)
     .text("hello@productvisuals.ai", 56, 460, { width: CONTENT_W, align: "center" });
@@ -344,7 +344,7 @@ bullet("Support for Amazon, Flipkart, and Meesho with platform-specific sizing a
 bullet("Basic product images (nano-banana AI) and premium A+ / RPD banners (GPT Image 2)");
 bullet("AI-powered photo analysis — auto-fills product name, brand, material, dimensions, color, and key features");
 bullet("AI-generated listing copy (titles, bullet points, descriptions, keywords, SEO metadata) for all three marketplaces");
-bullet("Credit-based billing with GST-compliant Indian rupee pricing via Stripe");
+bullet("Credit-based billing with GST-compliant Indian rupee pricing via Razorpay");
 bullet("Generation history with re-download capability");
 bullet("Onboarding tour for first-time users");
 bullet("Bilingual UI (English / Hindi)");
@@ -366,14 +366,14 @@ multiColTable(
   ["Layer", "Technology", "Role"],
   [
     ["Frontend UI", "Next.js 15 (App Router), React 19, TypeScript", "Pages, forms, image gallery, user account management"],
-    ["API Routes", "Next.js Route Handlers (app/api/*)", "Authentication, image generation, listing generation, credits, Stripe webhooks"],
+    ["API Routes", "Next.js Route Handlers (app/api/*)", "Authentication, image generation, listing generation, credits, Razorpay webhooks"],
     ["Database", "MongoDB (via @mongodb-adapter / NextAuth)", "Users, credits, transaction history, generation history, listings"],
     ["File Storage", "Cloudflare R2 (S3-compatible)", "Stores generated images; public URL served via R2 CDN"],
     ["Image Generation", "fal.ai (nano-banana, GPT Image 2)", "AI product image generation from reference photos"],
     ["Photo Analysis", "Google Gemini 3.5 Flash (Vision)", "Extracts product metadata from uploaded photos"],
     ["Listing Copy", "Google Gemini 3.5 Flash (Text)", "Generates marketplace listing text (titles, bullets, descriptions)"],
     ["Auth", "NextAuth.js v5 (Credentials + Google OAuth)", "User authentication and session management"],
-    ["Payments", "Stripe (Checkout + Webhooks)", "Credit pack purchases with Indian INR billing and GST receipts"],
+    ["Payments", "Razorpay (Orders + Webhooks)", "Credit pack purchases with Indian INR billing and GST receipts"],
     ["Styling", "CSS Modules (globals.css)", "Custom design system — no Tailwind or component library"],
     ["Animations", "GSAP + Motion.dev", "UI transitions and entrance animations"],
   ],
@@ -411,9 +411,9 @@ code(`image-generation/
 │   │   ├── credits/welcome/       # GET — check welcome bonus flag
 │   │   ├── history/              # GET — generation history list
 │   │   ├── history/[id]/         # GET — single generation with images
-│   │   ├── stripe/checkout/       # POST — create Stripe Checkout session
-│   │   ├── stripe/portal/         # POST — Stripe billing portal
-│   │   ├── stripe/webhook/         # POST — Stripe payment confirmation
+│   │   ├── razorpay/checkout/     # POST — create Razorpay order / verify payment
+│   │   ├── razorpay/portal/       # POST — stub (Razorpay has no billing portal)
+│   │   ├── razorpay/webhook/      # POST — Razorpay payment.captured backup
 │   │   └── assistant/             # POST — AI assistant chat
 │   ├── studio/page.tsx           # Main product image studio
 │   ├── login/page.tsx             # Sign in / Register page
@@ -432,7 +432,7 @@ code(`image-generation/
 │   ├── pricing.ts                 # Credit costs & purchasable plans
 │   ├── export.ts                 # CSV/JSON export for marketplaces
 │   ├── cloudflare.ts             # R2 file upload/delete
-│   ├── stripe.ts                 # Stripe client initialization
+│   ├── razorpay.ts                # Razorpay client, orders, signature verification
 │   └── email.ts                  # Resend email (receipts, OTPs)
 └── public/                       # Static assets`);
 
@@ -468,7 +468,7 @@ multiColTable(
     ["Cloudflare R2 (S3 API)", "Object storage — generated image files"],
     ["fal.ai client", "Image generation — nano-banana (basic) + GPT Image 2 (A+)"],
     ["Google Gemini 3.5 Flash", "Photo vision analysis + listing text generation"],
-    ["Stripe", "Payments — INR Checkout, webhooks, billing portal"],
+    ["Razorpay", "Payments — INR Orders + Checkout modal, webhooks (no billing portal)"],
     ["Resend", "Transactional email — receipts, OTPs"],
     ["sharp", "^0.35", "Server-side image resizing (A+ image post-processing)"],
   ],
@@ -496,7 +496,7 @@ h1("4.  Environment Variables");
 body("All configuration is managed via environment variables in a .env.local file. Required variables are grouped by service. Copy .env.example to .env.local and fill in all values before running the application in production. Never commit .env files to version control.");
 
 spacer();
-callout("Setup Required", "Missing environment variables will cause API routes to fail. The Stripe webhook, fal.ai, and Gemini keys are the most commonly missed.", [220, 38, 38]);
+callout("Setup Required", "Missing environment variables will cause API routes to fail. The Razorpay webhook, fal.ai, and Gemini keys are the most commonly missed.", [220, 38, 38]);
 
 spacer();
 h2("4.1  Database");
@@ -538,10 +538,11 @@ twoColTable([
 ]);
 
 spacer();
-h2("4.6  Payments (Stripe)");
+h2("4.6  Payments (Razorpay)");
 twoColTable([
-  ["STRIPE_SECRET_KEY", "Stripe secret key (sk_live_... or sk_test_...) — backend only"],
-  ["STRIPE_WEBHOOK_SECRET", "Webhook signing secret from the Stripe Dashboard (whsec_...)"],
+  ["RAZORPAY_KEY_ID", "Razorpay key ID (rzp_live_... or rzp_test_...) — used client + server side"],
+  ["RAZORPAY_KEY_SECRET", "Razorpay key secret — backend only"],
+  ["RAZORPAY_WEBHOOK_SECRET", "Webhook signing secret from dashboard.razorpay.com/app/webhooks"],
 ]);
 
 spacer();
@@ -671,17 +672,18 @@ multiColTable(
 spacer();
 h2("7.4  Atomic Credit Operations");
 bullet("chargeUserCredits — deducts credits only if balance >= required amount in a single atomic MongoDB operation, preventing race conditions");
-bullet("addUserCredits — increments balance and is guarded by a Stripe Checkout session ID (idempotency key) to prevent double-crediting on webhook retries");
+bullet("addUserCredits — increments balance and is guarded by the Razorpay payment ID (idempotency key) to prevent double-crediting on webhook/verify retries");
 bullet("refundUserCredits — restores credits when generation fails after charging");
 
 spacer();
-h2("7.5  Stripe Payment Flow");
+h2("7.5  Razorpay Payment Flow");
 numbered("User selects a plan on /credits and clicks Buy", 1);
-numbered("POST /api/stripe/checkout — creates a Stripe Checkout session with metadata (userId, plan, credits, price)", 2);
-numbered("User completes payment on Stripe's hosted checkout page (INR currency)", 3);
-numbered("Stripe sends a checkout.session.completed webhook to /api/stripe/webhook", 4);
-numbered("Webhook handler: verifies signature → adds credits via addUserCredits (idempotent by session ID) → sends receipt email via Resend", 5);
-numbered("User redirected to /credits?success=true and sees updated balance", 6);
+numbered("POST /api/razorpay/checkout — creates a Razorpay order for the plan's INR amount, returns order/key details", 2);
+numbered("Client opens the Razorpay Checkout modal in-page using those details (INR currency)", 3);
+numbered("On success, client calls POST /api/razorpay/checkout with action: 'verify' — validates the HMAC signature, re-fetches the order/payment from Razorpay, and re-checks amount + userId", 4);
+numbered("Credits are added via addUserCredits (idempotent by payment ID) → receipt email sent via Resend", 5);
+numbered("A payment.captured webhook at /api/razorpay/webhook acts as a backup in case the client-side verify call never completes", 6);
+numbered("User sees the success state on /credits?success=true with updated balance", 7);
 
 spacer();
 h2("7.6  GST / Invoice Handling");
@@ -882,24 +884,28 @@ code(`GET /api/history/[id]
 Response: { id, productName, category, marketplaces, createdAt, images: [...], listings: {...} }`);
 
 spacer();
-h2("9.8  POST /api/stripe/checkout");
-body("Creates a Stripe Checkout session for purchasing a credit pack. Requires authentication.");
-code(`POST /api/stripe/checkout
+h2("9.8  POST /api/razorpay/checkout");
+body("Creates a Razorpay order for purchasing a credit pack, or (with action: 'verify') verifies a completed payment. Requires authentication.");
+code(`POST /api/razorpay/checkout
 Body: { "plan": "starter" | "growth" | "pro" | "business" }
-Response: { "url": "<stripe_checkout_url>" }`);
+Response: { keyId, orderId, amount, currency, name, description, prefill }
+
+POST /api/razorpay/checkout (verify)
+Body: { "action": "verify", "orderId", "paymentId", "signature" }
+Response: { success, newBalance, alreadyProcessed }`);
 
 spacer();
-h2("9.9  POST /api/stripe/webhook");
-body("Handles Stripe checkout.session.completed events. Idempotent via session ID. Sends a receipt email via Resend.");
-code(`POST /api/stripe/webhook
-Required header: Stripe-Signature: <header>
-Internal: adds credits, sends receipt, marks session as processed`);
+h2("9.9  POST /api/razorpay/webhook");
+body("Handles Razorpay payment.captured events as a backup to client-side verification. Idempotent via payment ID. Sends a receipt email via Resend.");
+code(`POST /api/razorpay/webhook
+Required header: X-Razorpay-Signature: <hmac>
+Internal: adds credits, sends receipt, marks payment as processed`);
 
 spacer();
-h2("9.10  POST /api/stripe/portal");
-body("Creates a Stripe billing portal session for managing payment methods and invoices. Requires authentication.");
-code(`POST /api/stripe/portal
-Response: { "url": "<stripe_portal_url>" }`);
+h2("9.10  POST /api/razorpay/portal");
+body("Razorpay has no hosted billing-portal equivalent to Stripe's — this endpoint always returns 404. Receipts are viewed via the in-app credit purchase history instead.");
+code(`POST /api/razorpay/portal
+Response (404): { "error": "Razorpay does not provide a customer billing portal..." }`);
 
 // ══════════════════════════════════════════════════════════════════════════════
 // 10. MARKETPLACE INTEGRATIONS
@@ -1083,10 +1089,10 @@ multiColTable(
   ["Step", "Action", "Notes"],
   [
     ["1", "Navigate to /credits", "Shows current balance, plan cards, transaction history"],
-    ["2", "Click Buy on a plan (e.g. Growth ₹1,000 for 55 credits + 5 bonus)", "POST /api/stripe/checkout with plan ID"],
-    ["3", "Redirected to Stripe Checkout (INR)", "Stripe handles PCI compliance; user enters card details"],
-    ["4", "Payment confirmed on Stripe", "checkout.session.completed webhook fires"],
-    ["5", "Webhook: credits added to account", "Idempotent — safe against webhook retries"],
+    ["2", "Click Buy on a plan (e.g. Growth ₹1,000 for 55 credits + 5 bonus)", "POST /api/razorpay/checkout creates a Razorpay order"],
+    ["3", "Razorpay Checkout modal opens in-page (INR)", "Razorpay handles PCI compliance; user enters card/UPI details"],
+    ["4", "Payment confirmed by Razorpay", "Client calls checkout API with action: verify + signature"],
+    ["5", "Credits added to account", "Idempotent by payment ID — safe against retries; webhook is a backup path"],
     ["6", "Redirect to /credits?success=true", "Balance updates; success banner shown; receipt email sent"],
     ["7", "Optional: click View Bill", "ReceiptModal shows GST breakdown (base amount + CGST + SGST)"],
   ],
@@ -1123,7 +1129,7 @@ bullet("MongoDB instance (local or Atlas)");
 bullet("Cloudflare account with R2 enabled + API token");
 bullet("fal.ai account + API key");
 bullet("Google Cloud project + AI Studio API key");
-bullet("Stripe account (test or live mode)");
+bullet("Razorpay account (test or live mode)");
 bullet("Resend account (for email receipts)");
 
 spacer();
@@ -1157,7 +1163,7 @@ multiColTable(
     ["Cloudflare R2", "dash.cloudflare.com/r2", "Account ID, Access Key, Secret, Bucket Name"],
     ["fal.ai", "fal.ai", "API Key (FAL_KEY)"],
     ["Google AI Studio", "aistudio.google.com/apikey", "API Key (GEMINI_API_KEY) — starts with AIza..."],
-    ["Stripe", "dashboard.stripe.com", "Secret Key + Webhook Secret"],
+    ["Razorpay", "dashboard.razorpay.com/app/keys", "Key ID + Key Secret + Webhook Secret"],
     ["Resend", "resend.com", "API Key"],
     ["Google OAuth", "console.cloud.google.com", "OAuth Client ID + Secret"],
   ],
@@ -1165,11 +1171,12 @@ multiColTable(
 );
 
 spacer();
-h2("13.4  Stripe Webhook Setup (Local Testing)");
-body("To test Stripe webhooks locally, use the Stripe CLI:");
-code(`stripe listen --forward-to localhost:3000/api/stripe/webhook
-# Copy the webhook signing secret (whsec_...) output by this command
-# Paste it as STRIPE_WEBHOOK_SECRET in .env.local`);
+h2("13.4  Razorpay Webhook Setup (Local Testing)");
+body("To test Razorpay webhooks locally, expose your dev server with a tunnel (e.g. ngrok) and register the URL in the Razorpay dashboard:");
+code(`ngrok http 3000
+# Add https://<ngrok-id>.ngrok.io/api/razorpay/webhook as a webhook URL
+# in dashboard.razorpay.com/app/webhooks, subscribed to payment.captured
+# Copy the webhook secret shown there into RAZORPAY_WEBHOOK_SECRET in .env.local`);
 
 spacer();
 h2("13.5  Deployment");
@@ -1178,7 +1185,7 @@ multiColTable(
   ["Platform", "Notes"],
   [
     ["Vercel", "Recommended — zero-config Next.js deployment; add env vars in dashboard"],
-    ["Railway", "Add MONGODB_URI, R2, Stripe, fal, Gemini vars as environment variables"],
+    ["Railway", "Add MONGODB_URI, R2, Razorpay, fal, Gemini vars as environment variables"],
     ["Render", "Use build command: npm run build; start command: npm start"],
     ["Self-hosted (VPS)", "Run npm run build && npm start behind a reverse proxy (nginx/Caddy)"],
   ],
@@ -1202,8 +1209,9 @@ multiColTable(
     ["R2_ACCESS_KEY_ID", "Yes", "lib/cloudflare.ts", "Cloudflare API Token"],
     ["R2_SECRET_ACCESS_KEY", "Yes", "lib/cloudflare.ts", "Cloudflare API Token"],
     ["R2_BUCKET_NAME", "Yes", "lib/cloudflare.ts", "Cloudflare R2 → bucket name"],
-    ["STRIPE_SECRET_KEY", "Yes", "lib/stripe.ts, webhook", "Stripe dashboard → Developers → API keys"],
-    ["STRIPE_WEBHOOK_SECRET", "Yes (webhooks)", "webhook route", "stripe listen CLI output"],
+    ["RAZORPAY_KEY_ID", "Yes", "lib/razorpay.ts, checkout route", "dashboard.razorpay.com/app/keys"],
+    ["RAZORPAY_KEY_SECRET", "Yes", "lib/razorpay.ts, checkout route", "dashboard.razorpay.com/app/keys"],
+    ["RAZORPAY_WEBHOOK_SECRET", "Yes (webhooks)", "webhook route", "dashboard.razorpay.com/app/webhooks"],
     ["RESEND_API_KEY", "No (recommended)", "lib/email.ts", "resend.com → API Keys"],
     ["EMAIL_FROM", "No (recommended)", "lib/email.ts", "Your verified domain in Resend"],
   ],
