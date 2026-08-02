@@ -556,7 +556,7 @@ export default function OnboardingProvider({ children, tourMode = false, holdWel
           showContinue={showContinue}
           nextLabel={showContinue && currentConfig.step === "logo" ? "Continue" : currentConfig.nextLabel}
           nextDisabled={!!currentConfig.requiresField && !showContinue}
-          hideNext={currentConfig.step === "processing" || currentConfig.step === "generating-images"}
+          hideNext={currentConfig.step === "processing" || currentConfig.step === "publish" || currentConfig.step === "generating-images"}
           onContinue={goNext}
           onNext={goNext}
           onPrev={goBack}
