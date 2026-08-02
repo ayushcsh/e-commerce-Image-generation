@@ -715,6 +715,10 @@ export default function StudioPage() {
 
   // ── First-login welcome credit popup ─────────────────────────────────────────
   const [showCreditWelcome, setShowCreditWelcome] = useState(false);
+  // Tracks whether the /api/credits/welcome check has finished — the tour's
+  // welcome modal stays held until this resolves, so it can never render at
+  // the same time as (or before) the free-credit gift popup.
+  const [creditWelcomeChecked, setCreditWelcomeChecked] = useState(false);
 
   useEffect(() => {
     if (!session?.user?.id) return;
@@ -723,8 +727,11 @@ export default function StudioPage() {
       .then((data) => {
         if (data.show) setShowCreditWelcome(true);
       })
-      .catch(console.error);
+      .catch(console.error)
+      .finally(() => setCreditWelcomeChecked(true));
   }, [session?.user?.id]);
+
+  const holdTourWelcome = showCreditWelcome || !creditWelcomeChecked;
 
   function dismissCreditWelcome() {
     setShowCreditWelcome(false);
@@ -1274,7 +1281,7 @@ export default function StudioPage() {
   ];
 
   return (
-    <OnboardingProvider tourMode>
+    <OnboardingProvider tourMode holdWelcome={holdTourWelcome}>
     <main className={`studioPage${showHistory ? " historyOpen" : ""}`} suppressHydrationWarning>
       <CreditWelcomeModal visible={showCreditWelcome} onClose={dismissCreditWelcome} />
 

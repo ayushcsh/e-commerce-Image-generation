@@ -552,6 +552,27 @@
 }
 .tourBtnFinish:hover { background: #059669; }
 
+/* Dev-only "Start Tour" trigger — never rendered in production builds.
+   Docked top-center: bottom-left collides with Next.js's own dev-tools
+   overlay ("N  1 Issue" pill), bottom-right collides with the chat widget. */
+.tourDevBtn {
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9760;
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  border: 1.5px dashed #f59e0b;
+  background: #fffbeb;
+  color: #92400e;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: var(--shadow-md);
+}
+.tourDevBtn:hover { background: #fef3c7; }
+
 /*
  * Tour target highlight. Dimming is handled entirely by the 4 overlay bands
  * (rendered around the target, never covering it) — this class is a

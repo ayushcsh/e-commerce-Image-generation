@@ -9,11 +9,13 @@ import type { OnboardingStep } from "./types";
 interface TourContextValue {
   isTourMode: boolean;
   tourLockedAplus: boolean;
+  forceStartTour: () => void;
 }
 
 export const TourContext = createContext<TourContextValue>({
   isTourMode: false,
   tourLockedAplus: false,
+  forceStartTour: () => {},
 });
 
 export function useTourContext() {
@@ -117,7 +119,8 @@ const TOUR_STEPS: Array<{
     description: "Pick where you're selling and the background style your listing images should use.",
     requiresField: true,
     waitFor: () => {
-      const checked = document.querySelectorAll("#marketplace-section input[type='checkbox']:checked");
+      // Marketplace is a single-select rendered as radio inputs, not checkboxes.
+      const checked = document.querySelectorAll("#marketplace-section input:checked");
       return checked.length > 0;
     },
   },
@@ -271,9 +274,12 @@ const TOUR_STEPS: Array<{
 interface OnboardingProviderProps {
   children: React.ReactNode;
   tourMode?: boolean;
+  // Keeps the tour's welcome modal from showing while true — used so it
+  // never overlaps a still-open/unchecked free-credit welcome popup.
+  holdWelcome?: boolean;
 }
 
-export default function OnboardingProvider({ children, tourMode = false }: OnboardingProviderProps) {
+export default function OnboardingProvider({ children, tourMode = false, holdWelcome = false }: OnboardingProviderProps) {
   const { data: session, status: sessionStatus } = useSession();
   const [showWelcome, setShowWelcome] = useState(false);
   const [tourActive, setTourActive] = useState(false);
@@ -334,6 +340,18 @@ export default function OnboardingProvider({ children, tourMode = false }: Onboa
     setTourActive(false);
     setCompleted(true);
     markCompleted();
+  }
+
+  // Dev-only escape hatch for manually (re-)triggering the tour during
+  // testing, bypassing the server-side completed flag and welcome-modal gate.
+  function forceStartTour() {
+    setShowWelcome(false);
+    setCompleted(false);
+    setTourActive(true);
+    setTourStep("upload");
+    setTimeout(() => {
+      document.getElementById("photos")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 200);
   }
 
   // ── Show welcome on first visit ────────────────────────────────────────────
@@ -479,12 +497,21 @@ export default function OnboardingProvider({ children, tourMode = false }: Onboa
   const currentConfig = TOUR_STEPS.find((s) => s.step === tourStep);
   const currentIdx    = TOUR_STEPS.findIndex((s) => s.step === tourStep);
 
+  // Dev-only button to (re-)trigger the tour on demand while testing —
+  // never rendered in production builds.
+  const devTourButton = process.env.NODE_ENV !== "production" && !tourActive ? (
+    <button type="button" className="tourDevBtn" onClick={forceStartTour}>
+      🧪 Start Tour
+    </button>
+  ) : null;
+
   // ── Done screen ──────────────────────────────────────────────────────────
   if (completed && !tourActive && !showWelcome) {
     return (
-      <TourContext.Provider value={{ isTourMode, tourLockedAplus: isTourMode }}>
+      <TourContext.Provider value={{ isTourMode, tourLockedAplus: isTourMode, forceStartTour }}>
         {children}
         <DoneScreen />
+        {devTourButton}
       </TourContext.Provider>
     );
   }
@@ -492,12 +519,13 @@ export default function OnboardingProvider({ children, tourMode = false }: Onboa
   const tourLockedAplus = isTourMode;
 
   return (
-    <TourContext.Provider value={{ isTourMode, tourLockedAplus }}>
+    <TourContext.Provider value={{ isTourMode, tourLockedAplus, forceStartTour }}>
       {children}
+      {devTourButton}
 
       {/* Welcome modal */}
       <WelcomeModal
-        visible={showWelcome && !tourActive}
+        visible={showWelcome && !tourActive && !holdWelcome}
         onStart={handleStart}
         onSkip={handleSkip}
       />
